@@ -103,6 +103,29 @@ class FakePlaylistTracksRepository(playlistTracks: Map<String, List<PlaylistTrac
     ): PlaylistTrack? {
         return null
     }
+
+    override fun syncToRemote(
+        playlistId: String,
+        tracks: List<PlaylistTrackViewModel>,
+        remote: List<PlaylistTrackViewModel>,
+    ): Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return emptyFlow()
+    }
+
+    override fun addAtIndexes(
+        track: TrackViewModel,
+        playlistId: String,
+        indexOnPlaylist: List<Int>,
+    ): Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return emptyFlow()
+    }
+
+    override fun removeTrack(
+        track: TrackViewModel,
+        playlistId: String,
+    ): Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return emptyFlow()
+    }
 }
 
 class FakeTrackRepository(tracks: Iterable<TrackViewModel> = emptyList()) :

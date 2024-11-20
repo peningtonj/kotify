@@ -1,43 +1,14 @@
 package com.dzirbel.kotify.network
 
 import com.dzirbel.kotify.Runtime
-import com.dzirbel.kotify.network.model.CursorPaging
-import com.dzirbel.kotify.network.model.FullSpotifyAlbum
-import com.dzirbel.kotify.network.model.FullSpotifyArtist
-import com.dzirbel.kotify.network.model.FullSpotifyEpisode
-import com.dzirbel.kotify.network.model.FullSpotifyPlaylist
-import com.dzirbel.kotify.network.model.FullSpotifyShow
-import com.dzirbel.kotify.network.model.FullSpotifyTrack
-import com.dzirbel.kotify.network.model.Paging
-import com.dzirbel.kotify.network.model.PrivateSpotifyUser
-import com.dzirbel.kotify.network.model.PublicSpotifyUser
-import com.dzirbel.kotify.network.model.SimplifiedSpotifyAlbum
-import com.dzirbel.kotify.network.model.SimplifiedSpotifyEpisode
-import com.dzirbel.kotify.network.model.SimplifiedSpotifyPlaylist
-import com.dzirbel.kotify.network.model.SimplifiedSpotifyShow
-import com.dzirbel.kotify.network.model.SimplifiedSpotifyTrack
-import com.dzirbel.kotify.network.model.SpotifyAlbum
-import com.dzirbel.kotify.network.model.SpotifyAudioAnalysis
-import com.dzirbel.kotify.network.model.SpotifyAudioFeatures
-import com.dzirbel.kotify.network.model.SpotifyCategory
-import com.dzirbel.kotify.network.model.SpotifyImage
-import com.dzirbel.kotify.network.model.SpotifyPlayHistoryObject
-import com.dzirbel.kotify.network.model.SpotifyPlayback
-import com.dzirbel.kotify.network.model.SpotifyPlaybackDevice
-import com.dzirbel.kotify.network.model.SpotifyPlaybackOffset
-import com.dzirbel.kotify.network.model.SpotifyPlaylistTrack
-import com.dzirbel.kotify.network.model.SpotifyQueue
-import com.dzirbel.kotify.network.model.SpotifyRecommendations
-import com.dzirbel.kotify.network.model.SpotifyRepeatMode
-import com.dzirbel.kotify.network.model.SpotifySavedAlbum
-import com.dzirbel.kotify.network.model.SpotifySavedShow
-import com.dzirbel.kotify.network.model.SpotifySavedTrack
-import com.dzirbel.kotify.network.model.SpotifyTrackPlayback
+import com.dzirbel.kotify.network.model.*
 import com.dzirbel.kotify.network.oauth.AccessToken
 import com.dzirbel.kotify.network.util.await
 import com.dzirbel.kotify.network.util.bodyFromJson
 import com.dzirbel.kotify.network.util.json
 import kotlinx.coroutines.MainCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -94,7 +65,7 @@ object Spotify {
                     ?.error
                     ?.message
                     ?: response.message
-                return SpotifyError(code = response.code, message = message)
+                    return SpotifyError(code = response.code, message = message)
             }
         }
     }
@@ -148,9 +119,7 @@ object Spotify {
         queryParams: Map<String, String?>? = null,
         body: RequestBody? = null,
     ): T {
-        // check that the request is not being done on the main dispatcher
         require(coroutineContext[ContinuationInterceptor] !is MainCoroutineDispatcher)
-
         check(enabled) { "Spotify network calls are not enabled" }
 
         val token = AccessToken.Cache.getOrThrow()
@@ -170,12 +139,22 @@ object Spotify {
             .header("Authorization", "${token.tokenType} ${token.accessToken}")
             .build()
 
-        return configuration.okHttpClient.newCall(request).await().use { response ->
-            if (!response.isSuccessful) {
-                throw SpotifyError.from(response)
-            }
+        var attempt = 0
+        while (true) {
+            attempt++
+            val response = configuration.okHttpClient.newCall(request).await()
+            response.use {
+                if (response.isSuccessful) {
+                    return response.bodyFromJson(json)
+                }
 
-            response.bodyFromJson(json)
+                if (response.code == 429) { // HTTP 429: Too Many Requests
+                    val retryAfter = response.headers["Retry-After"]?.toLongOrNull() ?: 5L
+                    delay(retryAfter * 1000) // Retry after the specified delay in seconds
+                } else {
+                    throw SpotifyError.from(response)
+                }
+            }
         }
     }
 
@@ -1241,6 +1220,15 @@ object Spotify {
             return get("me/playlists", mapOf("limit" to limit?.toString(), "offset" to offset?.toString()))
         }
 
+        suspend fun getAlbumPlaylists(limit: Int? = null, offset: Int? = null): Iterable<FullSpotifyPlaylist> {
+            val allPlaylists = getPlaylists(limit, offset).asFlow().toList()
+            return allPlaylists.filter { playlist ->
+                playlist.description == "albums"
+            }.map {
+                getPlaylist(it.id)
+            }
+        }
+
         /**
          * Get a list of the playlists owned or followed by a Spotify user.
          *
@@ -1423,11 +1411,12 @@ object Spotify {
          */
         suspend fun removePlaylistTracks(playlistId: String, tracks: List<String>, snapshotId: String? = null): String {
             @Serializable
-            data class Body(val uris: List<String>, val snapshotId: String? = null)
-
+            data class Uri(val uri: String)
+            @Serializable
+            data class Body(val tracks: List<Uri>, val snapshotId: String? = null)
             return delete<_, SnaphshotId>(
                 "playlists/$playlistId/tracks",
-                jsonBody = Body(uris = tracks, snapshotId = snapshotId),
+                jsonBody = Body(tracks = tracks.map {track -> Uri(track)}, snapshotId = snapshotId),
             ).snapshotId
         }
 

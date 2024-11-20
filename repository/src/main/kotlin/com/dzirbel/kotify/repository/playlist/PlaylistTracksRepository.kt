@@ -14,9 +14,11 @@ import com.dzirbel.kotify.repository.convertToDB
 import com.dzirbel.kotify.repository.episode.EpisodeRepository
 import com.dzirbel.kotify.repository.episode.convertToDB
 import com.dzirbel.kotify.repository.track.TrackRepository
+import com.dzirbel.kotify.repository.track.TrackViewModel
 import com.dzirbel.kotify.repository.user.UserRepository
 import com.dzirbel.kotify.repository.user.convertToDB
 import com.dzirbel.kotify.repository.util.ReorderCalculator
+import com.dzirbel.kotify.repository.util.SyncCalculator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -45,6 +47,13 @@ interface PlaylistTracksRepository :
         data object Verifying : PlaylistReorderState
     }
 
+    sealed interface PlaylistSyncState {
+        data object Calculating : PlaylistSyncState
+        data class Reordering(val completedOps: Int, val totalOps: Int) : PlaylistSyncState
+        data object Verifying : PlaylistSyncState
+    }
+
+
     /**
      * Reorders the given [tracks] for the playlist with the given [playlistId] according to the given [comparator].
      *
@@ -66,6 +75,24 @@ interface PlaylistTracksRepository :
         index: Int,
         fetchTime: Instant,
     ): PlaylistTrack?
+
+    fun syncToRemote(
+        playlistId: String,
+        tracks: List<PlaylistTrackViewModel>,
+        remote: List<PlaylistTrackViewModel>,
+    ) : Flow<PlaylistSyncState>
+
+    fun addAtIndexes(
+        track: TrackViewModel,
+        playlistId: String,
+        indexOnPlaylist: List<Int>
+    ) : Flow<PlaylistSyncState>
+
+    fun removeTrack(
+        track: TrackViewModel,
+        playlistId: String,
+    ) : Flow<PlaylistSyncState>
+
 }
 
 // TODO add CacheStrategy
@@ -152,6 +179,18 @@ class DatabasePlaylistTracksRepository(
         }
     }
 
+    override fun syncToRemote(
+        playlistId: String,
+        tracks: List<PlaylistTrackViewModel>,
+        remote: List<PlaylistTrackViewModel>,
+    ) : Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return flow {
+            emit(PlaylistTracksRepository.PlaylistSyncState.Calculating)
+            val ops = SyncCalculator.calculateSyncOperations(local = tracks, remote = remote)
+            println(ops.size)
+        }
+    }
+
     override fun convertTrack(
         spotifyPlaylistTrack: SpotifyPlaylistTrack,
         playlistId: String,
@@ -161,12 +200,12 @@ class DatabasePlaylistTracksRepository(
         val playlistTrack = when (val track = spotifyPlaylistTrack.track) {
             is SimplifiedSpotifyTrack ->
                 trackRepository.convertToDB(track, fetchTime)?.id?.value?.let { trackId ->
-                    PlaylistTrack.findOrCreateFromTrack(trackId = trackId, playlistId = playlistId)
+                    PlaylistTrack.findOrCreateFromTrack(trackId = trackId, playlistId = playlistId, indexOnPlaylist = index )
                 }
 
             is SimplifiedSpotifyEpisode -> {
                 val episode = EpisodeRepository.convertToDB(networkModel = track, fetchTime = fetchTime)
-                PlaylistTrack.findOrCreateFromEpisode(episodeId = episode.id.value, playlistId = playlistId)
+                PlaylistTrack.findOrCreateFromEpisode(episodeId = episode.id.value, playlistId = playlistId, indexOnPlaylist = index)
             }
 
             null -> null
@@ -179,6 +218,36 @@ class DatabasePlaylistTracksRepository(
             spotifyPlaylistTrack.addedAt?.let { addedAt = it }
             isLocal = spotifyPlaylistTrack.isLocal
             indexOnPlaylist = index
+        }
+    }
+
+    override fun addAtIndexes(track: TrackViewModel, playlistId: String, indexesOnPlaylist: List<Int>) : Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return flow {
+            emit(PlaylistTracksRepository.PlaylistSyncState.Calculating)
+            val uri = track.uri.toString()
+            indexesOnPlaylist.forEach { indexOnPlaylist ->
+                Spotify.Playlists.addItemsToPlaylist(
+                    playlistId = playlistId,
+                    position = indexOnPlaylist,
+                    uris = listOf(uri)
+                )
+            }
+        }
+    }
+
+    override fun removeTrack(
+        track: TrackViewModel,
+        playlistId: String
+    ): Flow<PlaylistTracksRepository.PlaylistSyncState> {
+        return flow {
+            emit(PlaylistTracksRepository.PlaylistSyncState.Calculating)
+            Spotify.Playlists.removePlaylistTracks(playlistId, tracks=listOf(track.uri.toString()))
+
+            emit(PlaylistTracksRepository.PlaylistSyncState.Verifying)
+
+            refreshFromRemote(id = playlistId)
+                .join()
+
         }
     }
 }

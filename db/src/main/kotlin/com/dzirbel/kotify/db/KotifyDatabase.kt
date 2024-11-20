@@ -1,16 +1,6 @@
 package com.dzirbel.kotify.db
 
-import com.dzirbel.kotify.db.model.AlbumTable
-import com.dzirbel.kotify.db.model.ArtistAlbumTable
-import com.dzirbel.kotify.db.model.ArtistTable
-import com.dzirbel.kotify.db.model.GenreTable
-import com.dzirbel.kotify.db.model.GlobalUpdateTimesTable
-import com.dzirbel.kotify.db.model.ImageTable
-import com.dzirbel.kotify.db.model.PlaylistTable
-import com.dzirbel.kotify.db.model.PlaylistTrackTable
-import com.dzirbel.kotify.db.model.TrackRatingTable
-import com.dzirbel.kotify.db.model.TrackTable
-import com.dzirbel.kotify.db.model.UserTable
+import com.dzirbel.kotify.db.model.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -51,6 +41,9 @@ enum class DB(vararg val tables: Table) {
         PlaylistTable.PlaylistImageTable,
         PlaylistTable.SavedPlaylistsTable,
         PlaylistTrackTable,
+        AlbumPlaylistTable,
+        AlbumPlaylistTable.SavedAlbumPlaylistsTable,
+        AlbumPlaylistAlbumTable,
         TrackTable,
         TrackTable.TrackArtistTable,
         TrackTable.SavedTracksTable,

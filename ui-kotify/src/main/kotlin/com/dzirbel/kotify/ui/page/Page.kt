@@ -60,4 +60,23 @@ interface PageScope {
             )
         }
     }
+
+    @Composable
+    fun DisplayNormalPage(
+        title: String?,
+        header: (@Composable () -> Unit)?,
+        content: @Composable ColumnScope.() -> Unit,
+    ) {
+        DisplayPage(title = title) {
+            setNavigationTitleVisibility ->
+            NormalPage(
+                onHeaderVisibilityChange = { pageHeaderVisible ->
+                    setNavigationTitleVisibility(!pageHeaderVisible)
+                },
+                header = header,
+                content = content,
+            )
+
+        }
+    }
 }

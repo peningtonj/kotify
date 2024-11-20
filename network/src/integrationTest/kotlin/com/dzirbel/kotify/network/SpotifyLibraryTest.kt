@@ -19,7 +19,9 @@ class SpotifyLibraryTest {
     @Test
     fun getSavedAlbums() {
         val albums = runBlocking { Spotify.Library.getSavedAlbums().asFlow().toList() }
-
+        for (album in albums) {
+            val tracks = album.album.tracks
+        }
         albums.zipWithBy(NetworkFixtures.savedAlbums) { savedAlbum, albumProperties ->
             savedAlbum.album.id == albumProperties.id
         }.forEach { (savedAlbum, albumProperties) -> albumProperties.check(savedAlbum) }

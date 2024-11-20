@@ -162,7 +162,7 @@ class OAuth private constructor(
         /**
          * The default client ID, for my personal client.
          */
-        const val DEFAULT_CLIENT_ID = "0c303117a0624fb0adc4832dd286cf39"
+        const val DEFAULT_CLIENT_ID = "50709a6502f34b179880dc6e77ad8200"
 
         const val SPOTIFY_APPS_URL = "https://www.spotify.com/us/account/apps/"
 

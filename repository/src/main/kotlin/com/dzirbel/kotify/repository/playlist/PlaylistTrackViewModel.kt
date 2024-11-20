@@ -13,6 +13,7 @@ data class PlaylistTrackViewModel(
     val addedAt: String? = null,
     val isLocal: Boolean = false,
     val indexOnPlaylist: Int,
+    var directSortIndex: Int,
 ) {
     val addedAtInstant: Instant? by lazy {
         addedAt?.let { Instant.parse(it) }
@@ -31,6 +32,7 @@ data class PlaylistTrackViewModel(
         addedAt = playlistTrack.addedAt,
         isLocal = playlistTrack.isLocal,
         indexOnPlaylist = playlistTrack.indexOnPlaylist,
+        directSortIndex = playlistTrack.indexOnPlaylist
     )
 
     override fun equals(other: Any?): Boolean {
@@ -38,4 +40,5 @@ data class PlaylistTrackViewModel(
     }
 
     override fun hashCode() = track?.id?.hashCode() ?: episode?.id?.hashCode() ?: 0
+
 }

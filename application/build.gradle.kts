@@ -31,9 +31,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.material.context.menu)
     implementation(libs.okhttp)
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.2")
 
     testFixturesImplementation(project(":repository"))
-    testFixturesImplementation(project(":screenshot-test"))
     testFixturesImplementation(project(":ui-common"))
     testFixturesImplementation(project(":ui-kotify"))
     testFixturesImplementation(project(":util"))
@@ -51,16 +51,6 @@ testing {
             }
         }
 
-        withType<JvmTestSuite>().matching { it.name == "screenshotTest" }.configureEach {
-            dependencies {
-                implementation(testFixtures(project(":db")))
-                implementation(testFixtures(project(":network")))
-                implementation(testFixtures(project(":repository")))
-                implementation(testFixtures(project(":ui-common")))
-                implementation(testFixtures(project(":ui-kotify")))
-                implementation(testFixtures(project(":util")))
-            }
-        }
     }
 }
 

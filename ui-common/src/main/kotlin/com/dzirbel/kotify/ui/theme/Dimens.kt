@@ -44,6 +44,7 @@ object Dimens {
     // size of common images - album art, artist image, etc
     val contentImage = 200.dp
     val contentImageSmall = 80.dp
+    val contentImageMed = 140.dp
 
     val tooltipMaxWidth: Dp = 500.dp
 

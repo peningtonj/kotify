@@ -24,20 +24,18 @@ import androidx.compose.ui.text.font.FontWeight
 import com.dzirbel.kotify.Application
 import com.dzirbel.kotify.repository.CacheState
 import com.dzirbel.kotify.repository.CacheStrategy
+import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistViewModel
-import com.dzirbel.kotify.ui.CachedIcon
-import com.dzirbel.kotify.ui.LocalPlayer
-import com.dzirbel.kotify.ui.LocalPlaylistRepository
-import com.dzirbel.kotify.ui.LocalSavedPlaylistRepository
+import com.dzirbel.kotify.ui.*
 import com.dzirbel.kotify.ui.components.LibraryInvalidateButton
 import com.dzirbel.kotify.ui.components.SimpleTextButton
 import com.dzirbel.kotify.ui.components.TooltipArea
 import com.dzirbel.kotify.ui.components.VerticalScroll
 import com.dzirbel.kotify.ui.components.adapter.rememberListAdapterState
+import com.dzirbel.kotify.ui.page.albumplaylist.AlbumPlaylistPage
 import com.dzirbel.kotify.ui.page.albums.AlbumsPage
 import com.dzirbel.kotify.ui.page.artists.ArtistsPage
 import com.dzirbel.kotify.ui.page.playlist.PlaylistPage
-import com.dzirbel.kotify.ui.pageStack
 import com.dzirbel.kotify.ui.properties.PlaylistLibraryOrderProperty
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.util.mutate
@@ -68,6 +66,50 @@ fun LibraryPanel(modifier: Modifier = Modifier) {
                 selected = pageStack.value.current == AlbumsPage,
                 onClick = { pageStack.mutate { to(AlbumsPage) } },
             )
+
+            Spacer(Modifier.height(Dimens.space3))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.padding(start = Dimens.space3, end = Dimens.space3, top = Dimens.space3),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.space2),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(text = "Album Playlists", style = MaterialTheme.typography.h5, maxLines = 1)
+                    LibraryInvalidateButton(LocalSavedAlbumPlaylistRepository.current)
+                }
+            }
+
+            val albumPlaylistRepository = LocalAlbumPlaylistRepository.current
+            val savedAlbumPlaylistRepository = LocalSavedAlbumPlaylistRepository.current
+            val albumPlaylists = rememberListAdapterState() { scope ->
+                savedAlbumPlaylistRepository.library.flatMapLatestIn(scope) { cacheState ->
+                    val ids = cacheState?.cachedValue?.ids
+                    if (ids == null) {
+                        MutableStateFlow(if (cacheState is CacheState.Error) emptyList() else null)
+                    } else {
+                        // TODO handle other cache states: shimmer when loading, show errors, etc
+                        albumPlaylistRepository.statesOf(
+                            ids = ids,
+                            cacheStrategy = CacheStrategy.EntityTTL(), // do not require a full playlist model
+                        ).combinedStateWhenAllNotNull { it?.cachedValue }
+                    }
+                }
+            }
+//
+            if (albumPlaylists.value.hasElements) {
+                for (albumPlaylist in albumPlaylists.value.sortedElements) {
+                    AlbumPlaylistItem(albumPlaylist = albumPlaylist)
+                }
+            } else {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(Dimens.iconMedium).align(Alignment.CenterHorizontally),
+                )
+            }
 
             Spacer(Modifier.height(Dimens.space3))
 
@@ -150,6 +192,37 @@ private fun PlaylistItem(playlist: PlaylistViewModel) {
         val playbackUriState = LocalPlayer.current.playbackContextUri.collectAsState()
         val playingPlaylist = remember(playlist.uri) {
             derivedStateOf { playlist.uri != null && playbackUriState.value == playlist.uri }
+        }
+
+        if (playingPlaylist.value) {
+            CachedIcon(
+                name = "volume-up",
+                size = Dimens.fontDp,
+                tint = MaterialTheme.colors.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlbumPlaylistItem(albumPlaylist: AlbumPlaylistViewModel) {
+    val selected = pageStack.value.current == AlbumPlaylistPage(albumPlaylistId = albumPlaylist.id)
+
+    SimpleTextButton(
+        modifier = Modifier.fillMaxWidth(),
+        selected = selected,
+        contentPadding = PaddingValues(horizontal = Dimens.space3, vertical = Dimens.space2),
+        onClick = { pageStack.mutate { to(AlbumPlaylistPage(albumPlaylistId = albumPlaylist.id)) } },
+    ) {
+        Text(
+            text = albumPlaylist.name,
+            modifier = Modifier.weight(1f),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+
+        val playbackUriState = LocalPlayer.current.playbackContextUri.collectAsState()
+        val playingPlaylist = remember(albumPlaylist.uri) {
+            derivedStateOf { albumPlaylist.uri != null && playbackUriState.value == albumPlaylist.uri }
         }
 
         if (playingPlaylist.value) {

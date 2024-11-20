@@ -11,7 +11,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 
 object PlaylistTrackTable : IntIdTable() {
-    val addedAd: Column<String?> = varchar("added_at", 20).nullable()
+    val addedAt: Column<String?> = varchar("added_at", 20).nullable()
     val isLocal: Column<Boolean> = bool("is_local")
     val indexOnPlaylist: Column<Int> = integer("index_on_playlist")
 
@@ -21,8 +21,8 @@ object PlaylistTrackTable : IntIdTable() {
     val episode: Column<EntityID<String>?> = reference("episode", EpisodeTable).nullable()
 
     init {
-        uniqueIndex(playlist, track)
-        uniqueIndex(playlist, episode)
+        uniqueIndex(playlist, track, indexOnPlaylist)
+        uniqueIndex(playlist, episode, indexOnPlaylist)
     }
 }
 
@@ -31,7 +31,7 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
     var trackId: EntityID<String>? by PlaylistTrackTable.track
     var episodeId: EntityID<String>? by PlaylistTrackTable.episode
 
-    var addedAt: String? by PlaylistTrackTable.addedAd
+    var addedAt: String? by PlaylistTrackTable.addedAt
     var isLocal: Boolean by PlaylistTrackTable.isLocal
     var indexOnPlaylist: Int by PlaylistTrackTable.indexOnPlaylist
 
@@ -41,8 +41,8 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
     var episode: Episode? by Episode optionalReferencedOn PlaylistTrackTable.episode
 
     companion object : IntEntityClass<PlaylistTrack>(PlaylistTrackTable) {
-        fun findOrCreateFromTrack(trackId: String, playlistId: String): PlaylistTrack {
-            return find { (PlaylistTrackTable.track eq trackId) and (PlaylistTrackTable.playlist eq playlistId) }
+        fun findOrCreateFromTrack(trackId: String, playlistId: String, indexOnPlaylist: Int): PlaylistTrack {
+            return find { (PlaylistTrackTable.track eq trackId) and (PlaylistTrackTable.playlist eq playlistId) and (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist) }
                 .firstOrNull()
                 ?: new {
                     this.trackId = EntityID(id = trackId, table = TrackTable)
@@ -50,8 +50,8 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
                 }
         }
 
-        fun findOrCreateFromEpisode(episodeId: String, playlistId: String): PlaylistTrack {
-            return find { (PlaylistTrackTable.episode eq episodeId) and (PlaylistTrackTable.playlist eq playlistId) }
+        fun findOrCreateFromEpisode(episodeId: String, playlistId: String, indexOnPlaylist: Int): PlaylistTrack {
+            return find { (PlaylistTrackTable.episode eq episodeId) and (PlaylistTrackTable.playlist eq playlistId) and (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist)}
                 .firstOrNull()
                 ?: new {
                     this.episodeId = EntityID(id = episodeId, table = EpisodeTable)

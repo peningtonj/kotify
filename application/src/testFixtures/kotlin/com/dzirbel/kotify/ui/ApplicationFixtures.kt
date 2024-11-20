@@ -184,6 +184,7 @@ object ApplicationFixtures {
                 addedAt = random.nextGaussian(mean = 50, stddev = 30, min = 0)
                     .let { daysAgo -> CurrentTime.instant.minus(daysAgo.days.toJavaDuration()) }
                     .toString(),
+                directSortIndex = index,
             )
         }
     }

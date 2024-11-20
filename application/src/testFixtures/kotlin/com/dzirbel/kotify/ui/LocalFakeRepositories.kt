@@ -59,6 +59,7 @@ fun ProvideFakeRepositories(
         LocalAlbumRepository provides albumRepository,
         LocalAlbumTracksRepository provides albumTracksRepository,
         LocalPlaylistRepository provides playlistRepository,
+        LocalPlaylistRepository provides playlistRepository,
         LocalPlaylistTracksRepository provides playlistTracksRepository,
         LocalTrackRepository provides trackRepository,
         LocalUserRepository provides userRepository,

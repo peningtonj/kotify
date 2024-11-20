@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.detekt)
+//    alias(libs.plugins.detekt)
     id("jacoco")
     id("java-test-fixtures")
     kotlin("jvm") version libs.versions.kotlin

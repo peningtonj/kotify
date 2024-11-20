@@ -28,6 +28,12 @@ import com.dzirbel.kotify.repository.playlist.DatabaseSavedPlaylistRepository
 import com.dzirbel.kotify.repository.playlist.PlaylistRepository
 import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
 import com.dzirbel.kotify.repository.playlist.SavedPlaylistRepository
+import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistAlbumsRepository
+import com.dzirbel.kotify.repository.albumplaylist.DatabaseAlbumPlaylistAlbumsRepository
+import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistRepository
+import com.dzirbel.kotify.repository.albumplaylist.DatabaseSavedAlbumPlaylistRepository
+import com.dzirbel.kotify.repository.albumplaylist.DatabaseAlbumPlaylistRepository
+import com.dzirbel.kotify.repository.albumplaylist.SavedAlbumPlaylistRepository
 import com.dzirbel.kotify.repository.rating.DatabaseRatingRepository
 import com.dzirbel.kotify.repository.rating.RatingRepository
 import com.dzirbel.kotify.repository.track.DatabaseSavedTrackRepository
@@ -46,12 +52,14 @@ val LocalAlbumRepository = staticCompositionLocalOf<AlbumRepository> { error("no
 val LocalAlbumTracksRepository = staticCompositionLocalOf<AlbumTracksRepository> { error("not provided") }
 val LocalPlaylistRepository = staticCompositionLocalOf<PlaylistRepository> { error("not provided") }
 val LocalPlaylistTracksRepository = staticCompositionLocalOf<PlaylistTracksRepository> { error("not provided") }
+val LocalAlbumPlaylistAlbumsRepository = staticCompositionLocalOf<AlbumPlaylistAlbumsRepository> { error("not provided") }
+val LocalAlbumPlaylistRepository = staticCompositionLocalOf<AlbumPlaylistRepository> { error("not provided") }
 val LocalTrackRepository = staticCompositionLocalOf<TrackRepository> { error("not provided") }
 val LocalUserRepository = staticCompositionLocalOf<UserRepository> { error("not provided") }
-
 val LocalSavedAlbumRepository = staticCompositionLocalOf<SavedAlbumRepository> { error("not provided") }
 val LocalSavedArtistRepository = staticCompositionLocalOf<SavedArtistRepository> { error("not provided") }
 val LocalSavedPlaylistRepository = staticCompositionLocalOf<SavedPlaylistRepository> { error("not provided") }
+val LocalSavedAlbumPlaylistRepository = staticCompositionLocalOf<SavedAlbumPlaylistRepository> { error("not provided") }
 val LocalSavedTrackRepository = staticCompositionLocalOf<SavedTrackRepository> { error("not provided") }
 val LocalSavedRepositories = staticCompositionLocalOf<List<SavedRepository>> { error("not provided") }
 
@@ -91,10 +99,13 @@ fun ProvideRepositories(content: @Composable () -> Unit) {
 
     val playlistTracksRepository = DatabasePlaylistTracksRepository(scope, trackRepository, userRepository)
     val playlistRepository = DatabasePlaylistRepository(scope, playlistTracksRepository, userRepository)
+    val albumPlaylistAlbumsRepository = DatabaseAlbumPlaylistAlbumsRepository(scope, albumRepository, trackRepository, playlistRepository, userRepository)
+    val albumPlaylistRepository = DatabaseAlbumPlaylistRepository(scope, albumPlaylistAlbumsRepository, userRepository)
 
     val savedAlbumRepository = DatabaseSavedAlbumRepository(scope, userRepository, albumRepository)
     val savedArtistRepository = DatabaseSavedArtistRepository(scope, userRepository, artistRepository)
     val savedPlaylistRepository = DatabaseSavedPlaylistRepository(scope, userRepository, playlistRepository)
+    val savedAlbumPlaylistRepository = DatabaseSavedAlbumPlaylistRepository(scope, userRepository, albumPlaylistRepository)
     val savedTrackRepository = DatabaseSavedTrackRepository(scope, userRepository, trackRepository)
 
     savedRepositories =
@@ -118,10 +129,14 @@ fun ProvideRepositories(content: @Composable () -> Unit) {
         LocalPlaylistTracksRepository provides playlistTracksRepository,
         LocalTrackRepository provides trackRepository,
         LocalUserRepository provides userRepository,
-
         LocalSavedAlbumRepository provides savedAlbumRepository,
         LocalSavedArtistRepository provides savedArtistRepository,
         LocalSavedPlaylistRepository provides savedPlaylistRepository,
+
+        LocalAlbumPlaylistAlbumsRepository provides albumPlaylistAlbumsRepository,
+        LocalAlbumPlaylistRepository provides albumPlaylistRepository,
+
+        LocalSavedAlbumPlaylistRepository provides savedAlbumPlaylistRepository,
         LocalSavedTrackRepository provides savedTrackRepository,
         LocalSavedRepositories provides savedRepositories,
 

@@ -100,6 +100,29 @@ data class FullSpotifyPlaylist(
     val tracks: Paging<SpotifyPlaylistTrack>,
 ) : SpotifyPlaylist
 
+@Serializable
+data class FullSpotifyPlaylistOnlyMusic(
+    override val href: String,
+    override val id: String,
+    override val name: String,
+    override val type: String,
+    override val uri: String,
+    override val collaborative: Boolean,
+    override val description: String?,
+    @SerialName("external_urls") override val externalUrls: SpotifyExternalUrl,
+    override val images: List<SpotifyImage>?,
+    override val owner: PublicSpotifyUser,
+    @SerialName("primary_color") override val primaryColor: String? = null,
+    override val public: Boolean? = null,
+    @SerialName("snapshot_id") override val snapshotId: String,
+
+    /** Information about the followers of the playlist. */
+    val followers: SpotifyFollowers,
+
+    /** Information about the tracks of the playlist. */
+    val tracks: Paging<SpotifyTrack>,
+) : SpotifyPlaylist
+
 /** Undocumented model. */
 @Serializable
 data class SpotifyPlaylistTracks(

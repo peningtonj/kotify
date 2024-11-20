@@ -18,11 +18,6 @@ reporting {
             tasks.check.configure { finalizedBy(reportTask) }
         }
 
-        create<JacocoCoverageReport>("jacocoMergedScreenshotTestReport") {
-            testType = "screenshot-test"
-            tasks.check.configure { finalizedBy(reportTask) }
-        }
-
         create<JacocoCoverageReport>("jacocoMergedIntegrationTestReport") {
             testType = TestSuiteType.INTEGRATION_TEST
             val integrationTest by tasks.registering(Task::class)

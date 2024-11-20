@@ -41,7 +41,7 @@ fun AlbumCell(album: AlbumViewModel, onClick: () -> Unit, modifier: Modifier = M
             .padding(Dimens.space3),
         verticalArrangement = Arrangement.spacedBy(Dimens.space2),
     ) {
-        LoadedImage(album, modifier = Modifier.align(Alignment.CenterHorizontally))
+        LoadedImage(album, size = Dimens.contentImage, modifier = Modifier.align(Alignment.CenterHorizontally))
 
         Row(
             modifier = Modifier.widthIn(max = Dimens.contentImage),

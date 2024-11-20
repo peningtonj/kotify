@@ -262,6 +262,11 @@ data class AccessToken(
             val file = cacheFile
             if (file != null) {
                 val start = CurrentTime.mark
+//                if(!file.exists()) {
+//                    file.parentFile.mkdirs()
+//                    file.createNewFile()
+//
+//                }
                 file.outputStream().use { outputStream ->
                     cacheFileJson.encodeToStream(token, outputStream)
                 }

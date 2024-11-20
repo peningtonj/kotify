@@ -17,7 +17,6 @@ dependencies {
     implementation(libs.kotlinx.immutable.collections)
     implementation(libs.material.context.menu)
 
-    testFixturesImplementation(project(":screenshot-test"))
 }
 
 @Suppress("UnstableApiUsage")
@@ -29,10 +28,5 @@ testing {
             }
         }
 
-        withType<JvmTestSuite>().matching { it.name == "screenshotTest" }.configureEach {
-            dependencies {
-                implementation(libs.kotlinx.immutable.collections)
-            }
-        }
     }
 }

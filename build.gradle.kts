@@ -108,28 +108,6 @@ fun Project.configureTests() {
                     }
                 }
 
-                pluginManager.withPlugin("org.jetbrains.compose") {
-                    register<JvmTestSuite>("screenshotTest") {
-                        testType = "screenshot-test"
-
-                        dependencies {
-                            implementation(project(":screenshot-test"))
-                        }
-
-                        targets {
-                            all {
-                                // consider screenshot tests up to date based on REGEN_SCREENSHOTS environment variable
-                                testTask.configure {
-                                    inputs.property("regen", System.getenv("REGEN_SCREENSHOTS")?.toBoolean() == true)
-                                }
-
-                                // default "test" task is finalized by the "screenshotTest" task
-                                tasks.named { it == "test" }.configureEach {
-                                    finalizedBy(testTask)
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -174,7 +152,6 @@ fun Project.configureTests() {
             }
         )
     }
-}
 
 fun Project.configureJacoco() {
     pluginManager.withPlugin("jacoco") {

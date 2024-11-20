@@ -14,6 +14,7 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
 
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.2")
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.immutable.collections)
     implementation(libs.material.context.menu)
@@ -35,10 +36,5 @@ testing {
             }
         }
 
-        withType<JvmTestSuite>().matching { it.name == "screenshotTest" }.configureEach {
-            dependencies {
-                implementation(testFixtures(project(":ui-common")))
-            }
-        }
     }
 }

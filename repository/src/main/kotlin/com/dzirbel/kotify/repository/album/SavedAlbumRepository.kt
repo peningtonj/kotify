@@ -2,6 +2,7 @@ package com.dzirbel.kotify.repository.album
 
 import com.dzirbel.kotify.db.model.AlbumTable
 import com.dzirbel.kotify.network.Spotify
+import com.dzirbel.kotify.network.model.FullSpotifyArtist
 import com.dzirbel.kotify.network.model.SpotifySavedAlbum
 import com.dzirbel.kotify.network.model.asFlow
 import com.dzirbel.kotify.repository.DatabaseSavedRepository

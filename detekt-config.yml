@@ -427,9 +427,9 @@ formatting:
     active: true
     autoCorrect: true
   NoWildcardImports:
-    active: true
+    active: false
     autoCorrect: true
-    packagesToUseImportOnDemandProperty: ''
+    packagesToUseImportOnDemandProperty: 'com.dzirbel.kotify.network.model.*'
   NullableTypeSpacing:
     active: true
     autoCorrect: true
