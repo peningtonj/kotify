@@ -15,12 +15,14 @@ import androidx.compose.ui.unit.dp
 import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistAlbumViewModel
+import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistTrackViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
 import com.dzirbel.kotify.ui.*
 import com.dzirbel.kotify.ui.album.AlbumCell
+import com.dzirbel.kotify.ui.album.AlbumPlaylistAlbumCell
 import com.dzirbel.kotify.ui.components.*
 import com.dzirbel.kotify.ui.components.adapter.*
 import com.dzirbel.kotify.ui.page.Page
@@ -105,61 +107,63 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                 )
             },
         ) {
-            AlbumPlaylistReorderButton(
-                reorder = {
-                    playlistTracksRepository.reorder(
-                        playlistId = albumPlaylistId,
-                        tracks = playlistTracksAdapter.value.toList(),
-                        comparator = requireNotNull(playlistTracksAdapter.value.sorts).asComparator(),
-                    )
-                },
-                // TODO doesn't seem quite right... just revert to order by index on playlist?
-                onReorderFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
-            )
-            AlbumPlaylistButton(
-                func = {
-                    playlistTracksRepository.syncToRemote(
-                        playlistId = albumPlaylistId,
-                        tracks = playlistTracksAdapter.value.toList(),
-                        remote = playlistSnapshot
-                    )
-                },
-                // TODO doesn't seem quite right... just revert to order by index on playlist?
-                onFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
-                enabledText = "Sync with remote",
-            )
-            AlbumPlaylistButton(
-                func = {
-                    playlistTracksRepository.addAtIndexes(
-                        playlistId = albumPlaylistId,
-                        track = albumPlaylist.nextAlbumTrack!!,
-                        indexOnPlaylist = albumPlaylistAlbumsAdapter.value.map { album ->
-                            album.album?.totalTracks!!
-                        }.runningFold(-1) { acc, num -> acc + num + 1 }.drop(1)
-                    )
-                },
-                // TODO doesn't seem quite right... just revert to order by index on playlist?
-                onFinish = {
-                    transitionInPlaylist = true
-                },
-                enabledText = "Add Transition Track",
-                enabled = !transitionInPlaylist
-            )
-            AlbumPlaylistButton(
-                func = {
-                    playlistTracksRepository.removeTrack(
-                        playlistId = albumPlaylistId,
-                        track = albumPlaylist.nextAlbumTrack!!,
-                    )
-                },
-                // TODO doesn't seem quite right... just revert to order by index on playlist?
-                onFinish = {
-                    transitionInPlaylist = false
-                },
-                enabledText = "Remove Transition Track",
-                enabled = transitionInPlaylist
+            Row () {
 
-            )
+                AlbumPlaylistReorderButton(
+                    reorder = {
+                        playlistTracksRepository.reorder(
+                            playlistId = albumPlaylistId,
+                            tracks = playlistTracksAdapter.value.toList(),
+                            comparator = requireNotNull(playlistTracksAdapter.value.sorts).asComparator(),
+                        )
+                    },
+                    // TODO doesn't seem quite right... just revert to order by index on playlist?
+                    onReorderFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
+                )
+                AlbumPlaylistButton(
+                    func = {
+                        playlistTracksRepository.syncToRemote(
+                            playlistId = albumPlaylistId,
+                            tracks = playlistTracksAdapter.value.toList(),
+                            remote = playlistSnapshot
+                        )
+                    },
+                    // TODO doesn't seem quite right... just revert to order by index on playlist?
+                    onFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
+                    enabledText = "Sync with remote",
+                )
+                AlbumPlaylistButton(
+                    func = {
+                        playlistTracksRepository.addAtIndexes(
+                            playlistId = albumPlaylistId,
+                            track = albumPlaylist.nextAlbumTrack!!,
+                            indexOnPlaylist = albumPlaylistAlbumsAdapter.value.map { album ->
+                                album.album?.totalTracks!!
+                            }.runningFold(-1) { acc, num -> acc + num + 1 }.drop(1)
+                        )
+                    },
+                    // TODO doesn't seem quite right... just revert to order by index on playlist?
+                    onFinish = {
+                        transitionInPlaylist = true
+                    },
+                    enabledText = "Add Transition Track",
+                    enabled = !transitionInPlaylist
+                )
+                AlbumPlaylistButton(
+                    func = {
+                        playlistTracksRepository.removeTrack(
+                            playlistId = albumPlaylistId,
+                            track = albumPlaylist.nextAlbumTrack!!,
+                        )
+                    },
+                    // TODO doesn't seem quite right... just revert to order by index on playlist?
+                    onFinish = {
+                        transitionInPlaylist = false
+                    },
+                    enabledText = "Remove Transition Track",
+                    enabled = transitionInPlaylist
+                )
+            }
             if (albumPlaylistAlbumsAdapter.derived { it.hasElements }.value) {
                 val data =
                     remember { mutableStateOf(List(albumPlaylistAlbumsAdapter.value.size) { id -> albumPlaylistAlbumsAdapter.value[id]!! }) }
@@ -196,13 +200,16 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                     items(data.value, { it }) { album ->
                         ReorderableItem(state, key = album, defaultDraggingModifier = Modifier) { isDragging ->
                             val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
-
-                            AlbumCell(
+                            val firstTrack = playlistTracksAdapter.value.find { track -> (track.track?.album?.value?.id == album.album?.id) and (track.track?.trackNumber == 1) }
+                            AlbumPlaylistAlbumCell(
                                 album = album.album!!,
+                                firstTrack = firstTrack,
+                                albumPlaylist = albumPlaylist,
                                 onClick = { pageStack.mutate { to(AlbumPage(albumId = album.album!!.id)) } },
                                 modifier = Modifier.detectReorderAfterLongPress(state)
                                     .shadow(elevation.value)
                             )
+
                         }
                     }
                 }
@@ -234,6 +241,8 @@ private fun AlbumPlaylistHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Dimens.space2),
                 ) {
+                    PlayButton(context = Player.PlayContext.playlist(albumPlaylist))
+
                     Interpunct()
                     InvalidateButton(
                         repository = LocalAlbumPlaylistAlbumsRepository.current,

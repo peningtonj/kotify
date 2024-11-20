@@ -14,6 +14,7 @@ import com.dzirbel.kotify.network.model.SpotifyTrackPlayback
 import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.artist.ArtistViewModel
+import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistViewModel
 import com.dzirbel.kotify.repository.util.ToggleableState
 import kotlinx.coroutines.flow.SharedFlow
@@ -62,6 +63,11 @@ interface Player : Logging<Repository.LogData> {
             fun playlist(playlist: PlaylistViewModel) = playlist.uri?.let { PlayContext(contextUri = it) }
 
             /**
+             * Returns a [PlayContext] which plays the given [albumPlaylist].
+             */
+            fun playlist(albumPlaylist: AlbumPlaylistViewModel) = albumPlaylist.uri?.let { PlayContext(contextUri = it) }
+
+            /**
              * Returns a [PlayContext] which plays the track at the given [index] on the given [playlist].
              */
             fun playlistTrack(playlist: PlaylistViewModel, index: Int): PlayContext? {
@@ -69,7 +75,12 @@ interface Player : Logging<Repository.LogData> {
                     PlayContext(contextUri = it, offset = SpotifyPlaybackOffset(position = index))
                 }
             }
-        }
+            fun playlistTrack(playlist: AlbumPlaylistViewModel, index: Int): PlayContext? {
+                return playlist.uri?.let {
+                    PlayContext(contextUri = it, offset = SpotifyPlaybackOffset(position = index))
+                }
+            }
+            }
     }
 
     /**

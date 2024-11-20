@@ -46,7 +46,7 @@ class DatabaseSavedPlaylistRepository(
     }
 
     override suspend fun fetchLibrary(): Iterable<IndexedValue<SpotifyPlaylist>> {
-        return Spotify.Playlists.getPlaylists(limit = Spotify.MAX_LIMIT).asFlow().withIndex().toList()
+        return Spotify.Playlists.getPlaylists(limit = Spotify.MAX_LIMIT).asFlow().withIndex().toList().filter { playlist -> playlist.value.owner.id == "peningtonj" }
     }
 
     override fun convertToDB(
