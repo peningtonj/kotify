@@ -41,7 +41,7 @@ object ReorderCalculator {
         if (list.size <= 1) return emptyList()
 
         val indexedComparator = Comparator<IndexedValue<T>> { o1, o2 -> comparator.compare(o1.value, o2.value) }
-        val result = mutableListOf<ReorderOperation>()
+        var unoptimised = mutableListOf<ReorderOperation>()
         val removedIndices = mutableSetOf<Int>()
         for (indexedValue in list.withIndex().sortedWith(indexedComparator).withIndex()) {
             val toIndex = indexedValue.index
@@ -49,10 +49,52 @@ object ReorderCalculator {
 
             val adjusted = fromIndex + removedIndices.count { it > fromIndex }
             if (adjusted != toIndex) {
-                result.add(ReorderOperation(fromIndex = adjusted, toIndex = toIndex))
+                unoptimised.add(ReorderOperation(fromIndex = adjusted, toIndex = toIndex))
             }
 
             removedIndices.add(fromIndex)
+        }
+
+        val result = mutableListOf<ReorderOperation>()
+
+        var stillOptimizing = true
+        while (stillOptimizing) {
+            stillOptimizing = false
+            val optimizedOut = mutableListOf<ReorderOperation>()
+            val optimized = mutableListOf<ReorderOperation>()
+            unoptimised.forEachIndexed { index, op ->
+                if (!optimizedOut.contains(op)) {
+                    if ((index < unoptimised.size - 1)) {
+                        if ((op.rangeStart + op.rangeLength == unoptimised.get(index + 1).rangeStart) and
+                            (op.insertBefore + op.rangeLength == unoptimised.get(index + 1).insertBefore)
+                        ) {
+                            optimized.add(
+                                ReorderOperation(
+                                    rangeStart = op.rangeStart,
+                                    rangeLength = op.rangeLength + unoptimised.get(index + 1).rangeLength,
+                                    insertBefore = op.insertBefore
+                                )
+                            )
+                            optimizedOut.add(unoptimised.get(index + 1))
+                            stillOptimizing = true
+                        } else {
+                            optimized.add(op)
+                        }
+                    } else {
+                        optimized.add(op)
+                    }
+                }
+            }
+            if (stillOptimizing) {
+                unoptimised = optimized
+            } else {
+                optimized.forEach { op -> result.add(op) }
+            }
+        }
+
+        if (result.size > 100) {
+            println("Something went wrong and we got ${result.size} reorders")
+            return mutableListOf<ReorderOperation>()
         }
 
         return result

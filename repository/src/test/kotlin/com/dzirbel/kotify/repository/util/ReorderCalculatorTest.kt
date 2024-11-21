@@ -106,15 +106,16 @@ internal class ReorderCalculatorTest {
 
             return listOf(
                 OrderCase("abcd".toList(), expectedOperationsCount = 0),
-                OrderCase("dbca".toList(), expectedOperationsCount = 3),
+                OrderCase("dcab".toList(), expectedOperationsCount = 2),
+                OrderCase("dbca".toList(), expectedOperationsCount = 2),
                 OrderCase("acbd".toList(), expectedOperationsCount = 1),
                 OrderCase("bcad".toList(), expectedOperationsCount = 1),
                 OrderCase(alphaList, expectedOperationsCount = 0),
                 OrderCase(alphaList.reversed(), expectedOperationsCount = alphaList.size - 1),
-                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 9),
                 OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 8),
-                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 8),
-                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 8),
+                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 6),
+                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 6),
+                OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 7),
                 OrderCase(alphaList.shuffled(rand), expectedOperationsCount = 6),
             )
         }

@@ -17,6 +17,7 @@ import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistAlbumViewModel
 import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
+import com.dzirbel.kotify.repository.playlist.PlaylistRepository
 import com.dzirbel.kotify.repository.playlist.PlaylistTrackViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
@@ -118,7 +119,7 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                         )
                     },
                     // TODO doesn't seem quite right... just revert to order by index on playlist?
-                    onReorderFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
+                    onReorderFinish = { playlistTracksAdapter.mutate { withSort(persistentListOf()) } },
                 )
                 AlbumPlaylistButton(
                     func = {
@@ -246,6 +247,7 @@ private fun AlbumPlaylistHeader(
                     Interpunct()
                     InvalidateButton(
                         repository = LocalAlbumPlaylistAlbumsRepository.current,
+                        otherRepositories = listOf(LocalPlaylistTracksRepository.current, LocalPlaylistRepository.current),
                         id = albumPlaylistId,
                         icon = "queue-music",
                     )

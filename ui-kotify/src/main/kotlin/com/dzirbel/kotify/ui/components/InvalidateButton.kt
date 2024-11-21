@@ -64,6 +64,28 @@ fun InvalidateButton(
 }
 
 @Composable
+fun InvalidateButton(
+    repository: Repository<*>,
+    otherRepositories: List<Repository<*>>,
+    id: String,
+    modifier: Modifier = Modifier,
+    icon: String? = null,
+    contentPadding: PaddingValues = PaddingValues(Dimens.space1),
+) {
+    InvalidateButton(
+        cacheState = repository.stateOf(id = id).collectAsState().value,
+        onClick = {
+            repository.refreshFromRemote(id = id)
+            otherRepositories.forEach { it.refreshFromRemote(id = id) }
+                  },
+        entityName = repository.entityName,
+        modifier = modifier,
+        icon = icon,
+        contentPadding = contentPadding,
+    )
+}
+
+@Composable
 fun <T> InvalidateButton(
     cacheState: CacheState<T>?,
     onClick: () -> Unit,
