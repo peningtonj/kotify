@@ -55,42 +55,7 @@ object ReorderCalculator {
             removedIndices.add(fromIndex)
         }
 
-        val result = mutableListOf<ReorderOperation>()
-
-        var stillOptimizing = true
-        while (stillOptimizing) {
-            stillOptimizing = false
-            val optimizedOut = mutableListOf<ReorderOperation>()
-            val optimized = mutableListOf<ReorderOperation>()
-            unoptimised.forEachIndexed { index, op ->
-                if (!optimizedOut.contains(op)) {
-                    if ((index < unoptimised.size - 1)) {
-                        if ((op.rangeStart + op.rangeLength == unoptimised.get(index + 1).rangeStart) and
-                            (op.insertBefore + op.rangeLength == unoptimised.get(index + 1).insertBefore)
-                        ) {
-                            optimized.add(
-                                ReorderOperation(
-                                    rangeStart = op.rangeStart,
-                                    rangeLength = op.rangeLength + unoptimised.get(index + 1).rangeLength,
-                                    insertBefore = op.insertBefore
-                                )
-                            )
-                            optimizedOut.add(unoptimised.get(index + 1))
-                            stillOptimizing = true
-                        } else {
-                            optimized.add(op)
-                        }
-                    } else {
-                        optimized.add(op)
-                    }
-                }
-            }
-            if (stillOptimizing) {
-                unoptimised = optimized
-            } else {
-                optimized.forEach { op -> result.add(op) }
-            }
-        }
+        val result = combineContiguousReorderOperations(unoptimised)
 
         if (result.size > 100) {
             println("Something went wrong and we got ${result.size} reorders")
@@ -99,4 +64,26 @@ object ReorderCalculator {
 
         return result
     }
+
+    fun combineContiguousReorderOperations(unoptimised: MutableList<ReorderOperation>) : MutableList<ReorderOperation> {
+        val result = mutableListOf<ReorderOperation>()
+
+        if (unoptimised.isNotEmpty()) {
+            var current = unoptimised.removeFirst()
+            while (unoptimised.isNotEmpty()) {
+                val next = unoptimised.removeFirst()
+                if ((current.rangeStart + current.rangeLength == next.rangeStart) and
+                    (current.insertBefore + current.rangeLength == next.insertBefore)) {
+                    current = ReorderOperation(current.rangeStart, current.rangeLength + next.rangeLength, current.insertBefore)
+                } else {
+                    result.add(current)
+                    current = next
+                }
+            }
+            result.add(current)
+        }
+
+        return result
+    }
 }
+
