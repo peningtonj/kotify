@@ -36,6 +36,7 @@ import com.dzirbel.kotify.ui.page.albumplaylist.AlbumPlaylistPage
 import com.dzirbel.kotify.ui.page.albums.AlbumsPage
 import com.dzirbel.kotify.ui.page.artists.ArtistsPage
 import com.dzirbel.kotify.ui.page.playlist.PlaylistPage
+import com.dzirbel.kotify.ui.page.releaseradar.ReleaseRadar
 import com.dzirbel.kotify.ui.properties.PlaylistLibraryOrderProperty
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.util.mutate
@@ -65,6 +66,12 @@ fun LibraryPanel(modifier: Modifier = Modifier) {
                 text = "Albums",
                 selected = pageStack.value.current == AlbumsPage,
                 onClick = { pageStack.mutate { to(AlbumsPage) } },
+            )
+
+            MaxWidthButton(
+                text = "Release Radar",
+                selected = pageStack.value.current == ReleaseRadar,
+                onClick = { pageStack.mutate { to(ReleaseRadar) } },
             )
 
             Spacer(Modifier.height(Dimens.space3))

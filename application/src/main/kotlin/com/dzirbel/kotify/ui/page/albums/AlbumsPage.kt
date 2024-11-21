@@ -116,12 +116,12 @@ data object AlbumsPage : Page {
             )
         }
 
-        DisplayVerticalScrollPage(
-            title = "Saved Albums",
-            header = {
-                AlbumsPageHeader(albumsAdapter = albumsAdapter, albumProperties = albumProperties)
-            },
-        ) {
+            DisplayVerticalScrollPage(
+                title = "Saved Albums",
+                header = {
+                    AlbumsPageHeader(albumsAdapter = albumsAdapter, albumProperties = albumProperties)
+                },
+            ) {
             if (albumsAdapter.derived { it.hasElements }.value) {
                 Grid(
                     elements = albumsAdapter.value,

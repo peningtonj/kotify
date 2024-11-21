@@ -280,7 +280,7 @@ private fun ArtistPageHeader(
         }
     }
 }
-
+//
 private fun filterFor(albumTypes: Set<AlbumType>): ((ArtistAlbumViewModel) -> Boolean)? {
     return if (albumTypes.isNotEmpty()) {
         { album -> albumTypes.contains(album.albumGroup) }
