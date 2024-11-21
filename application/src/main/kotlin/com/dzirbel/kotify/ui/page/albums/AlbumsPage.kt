@@ -134,6 +134,7 @@ data object AlbumsPage : Page {
                         AlbumCell(
                             album = album,
                             onClick = { pageStack.mutate { to(AlbumPage(albumId = album.id)) } },
+                            ratingRepository = LocalRatingRepository.current,
                         )
                     },
                 )

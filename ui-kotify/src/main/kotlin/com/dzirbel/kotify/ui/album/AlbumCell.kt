@@ -9,31 +9,44 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import com.dzirbel.kotify.network.FullSpotifyTrackOrEpisode
+import com.dzirbel.kotify.network.model.FullSpotifyTrack
+import com.dzirbel.kotify.network.model.SpotifyTrack
 import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.player.Player
+import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
+import com.dzirbel.kotify.repository.playlist.PlaylistTrackViewModel
+import com.dzirbel.kotify.repository.rating.RatingRepository
 import com.dzirbel.kotify.ui.CachedIcon
+import com.dzirbel.kotify.ui.LocalPlayer
 import com.dzirbel.kotify.ui.LocalSavedAlbumRepository
 import com.dzirbel.kotify.ui.components.Interpunct
 import com.dzirbel.kotify.ui.components.LoadedImage
 import com.dzirbel.kotify.ui.components.PlayButton
 import com.dzirbel.kotify.ui.components.ToggleSaveButton
 import com.dzirbel.kotify.ui.components.star.AverageAlbumRating
+import com.dzirbel.kotify.ui.components.star.StarRating
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.theme.KotifyColors
 import com.dzirbel.kotify.ui.util.instrumentation.instrument
 
 @Composable
-fun AlbumCell(album: AlbumViewModel, onClick: () -> Unit, modifier: Modifier = Modifier, showRating: Boolean = true) {
+fun AlbumCell(
+    album: AlbumViewModel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    ratingRepository: RatingRepository,
+    firstTrack: PlaylistTrackViewModel? = null,
+    albumPlaylist: AlbumPlaylistViewModel? = null,
+    showRating: Boolean = true
+) {
+
     Column(
         modifier = modifier
             .instrument()
@@ -51,7 +64,20 @@ fun AlbumCell(album: AlbumViewModel, onClick: () -> Unit, modifier: Modifier = M
 
             ToggleSaveButton(repository = LocalSavedAlbumRepository.current, id = album.id)
 
-            PlayButton(context = Player.PlayContext.album(album), size = Dimens.iconSmall)
+            val player = LocalPlayer.current
+            val currentTrackState = player.currentItem.collectAsState()
+
+            if ((albumPlaylist != null) and (currentTrackState.value is FullSpotifyTrack)) {
+                albumPlaylistPlayIcon(
+                    album = album,
+                    currentTrackState = currentTrackState,
+                    player = player,
+                    firstTrack = firstTrack,
+                    albumPlaylist = albumPlaylist
+                )
+            } else {
+                PlayButton(context = Player.PlayContext.album(album), size = Dimens.iconSmall)
+            }
         }
 
         Row(
@@ -83,7 +109,52 @@ fun AlbumCell(album: AlbumViewModel, onClick: () -> Unit, modifier: Modifier = M
         }
 
         if (showRating) {
-            AverageAlbumRating(albumId = album.id)
+            StarRating(
+                rating = ratingRepository.ratingStateOf(id = album.id).collectAsState().value,
+                onRate = { rating -> ratingRepository.rate(id = album.id, rating = rating) },
+            )
+        }
+    }
+}
+
+@Composable
+fun albumPlaylistPlayIcon(
+    album: AlbumViewModel,
+    currentTrackState : State<FullSpotifyTrackOrEpisode?>,
+    player: Player,
+    firstTrack: PlaylistTrackViewModel? = null,
+    albumPlaylist: AlbumPlaylistViewModel? = null,
+) {
+    val playing = remember(album.id) {
+        derivedStateOf { (currentTrackState.value as FullSpotifyTrack).album.id == album.id }
+    }
+    if (playing.value) {
+        CachedIcon(
+            name = "volume-up",
+            size = Dimens.iconSmall,
+            contentDescription = "Playing",
+            tint = MaterialTheme.colors.primary,
+        )
+    } else {
+        IconButton(
+            onClick = {
+                player.play(
+                    context = Player.PlayContext.playlistTrack(
+                        albumPlaylist!!,
+                        firstTrack?.indexOnPlaylist!!
+                    )
+                )
+            },
+            enabled = Player.PlayContext.playlistTrack(
+                albumPlaylist!!,
+                firstTrack?.indexOnPlaylist!!
+            ) != null,
+        ) {
+            CachedIcon(
+                name = "play-circle-outline",
+                size = Dimens.iconSmall,
+                contentDescription = "Play",
+            )
         }
     }
 }

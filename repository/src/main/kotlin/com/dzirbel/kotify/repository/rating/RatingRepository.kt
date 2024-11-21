@@ -24,7 +24,6 @@ interface RatingRepository : Logging<Repository.LogData> {
      * The returned list has the same size and is in the same order as [ids].
      */
     fun ratingStatesOf(ids: Iterable<String>): List<StateFlow<Rating?>>
-
     /**
      * Returns a live [StateFlow] reflecting the current [AverageRating] (for the current user) of the entities with the
      * given [ids].

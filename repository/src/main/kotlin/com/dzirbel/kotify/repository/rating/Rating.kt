@@ -31,7 +31,7 @@ data class Rating(
         /**
          * Default max value (number of stars) for individually rated items.
          */
-        const val DEFAULT_MAX_RATING = 10
+        const val DEFAULT_MAX_RATING = 5
 
         /**
          * Default max value (number of stars) for ratings shown as averages.

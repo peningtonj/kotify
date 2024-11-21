@@ -23,7 +23,6 @@ import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
 import com.dzirbel.kotify.ui.*
 import com.dzirbel.kotify.ui.album.AlbumCell
-import com.dzirbel.kotify.ui.album.AlbumPlaylistAlbumCell
 import com.dzirbel.kotify.ui.components.*
 import com.dzirbel.kotify.ui.components.adapter.*
 import com.dzirbel.kotify.ui.page.Page
@@ -51,9 +50,6 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
         val playlistTracksRepository = LocalPlaylistTracksRepository.current
         val albumPlaylist =
             LocalAlbumPlaylistRepository.current.stateOf(id = albumPlaylistId).collectAsState().value?.cachedValue
-        val transitionAlbumId = albumPlaylist?.nextAlbumTrack?.albumId
-        val nextAlbumTrackAlbum =
-            LocalAlbumRepository.current.stateOf(id = transitionAlbumId!!).collectAsState().value?.cachedValue
 
         val imageSize = albumCellImageSize.toImageSize()
 
@@ -71,6 +67,10 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                 }
             },
         )
+
+        val transitionAlbumId = albumPlaylist?.nextAlbumTrack?.albumId
+        val nextAlbumTrackAlbum =
+            LocalAlbumRepository.current.stateOf(id = transitionAlbumId!!).collectAsState().value?.cachedValue
 
         val playlistTracksAdapter = rememberListAdapterState(
             key = albumPlaylistId,
@@ -202,10 +202,11 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                         ReorderableItem(state, key = album, defaultDraggingModifier = Modifier) { isDragging ->
                             val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
                             val firstTrack = playlistTracksAdapter.value.find { track -> (track.track?.album?.value?.id == album.album?.id) and (track.track?.trackNumber == 1) }
-                            AlbumPlaylistAlbumCell(
+                            AlbumCell(
                                 album = album.album!!,
                                 firstTrack = firstTrack,
                                 albumPlaylist = albumPlaylist,
+                                ratingRepository = LocalRatingRepository.current,
                                 onClick = { pageStack.mutate { to(AlbumPage(albumId = album.album!!.id)) } },
                                 modifier = Modifier.detectReorderAfterLongPress(state)
                                     .shadow(elevation.value)

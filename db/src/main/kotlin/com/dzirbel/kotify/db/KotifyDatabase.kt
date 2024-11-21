@@ -52,7 +52,7 @@ enum class DB(vararg val tables: Table) {
         UserTable.UserImageTable,
     ),
     RATINGS(
-        TrackRatingTable,
+        RatingTable,
     ),
     ;
 

@@ -2,7 +2,7 @@ package com.dzirbel.kotify.repository.rating
 
 import com.dzirbel.kotify.db.DB
 import com.dzirbel.kotify.db.KotifyDatabase
-import com.dzirbel.kotify.db.model.TrackRatingTable
+import com.dzirbel.kotify.db.model.RatingTable
 import com.dzirbel.kotify.db.util.single
 import com.dzirbel.kotify.log.MutableLog
 import com.dzirbel.kotify.log.asLog
@@ -109,16 +109,16 @@ class DatabaseRatingRepository(
             if (rating == null) {
                 // TODO just add a null rating on top rather than clearing history?
                 KotifyDatabase[DB.RATINGS].transaction("clear rating for track id $id") {
-                    TrackRatingTable.deleteWhere { (track eq id) and (TrackRatingTable.userId eq userId) }
+                    RatingTable.deleteWhere { (spotifyEntity eq id) and (RatingTable.userId eq userId) }
                 }
             } else {
                 KotifyDatabase[DB.RATINGS].transaction("add rating for track id $id") {
-                    TrackRatingTable.insert { statement ->
-                        statement[track] = id
-                        statement[TrackRatingTable.rating] = rating.rating
+                    RatingTable.insert { statement ->
+                        statement[spotifyEntity] = id
+                        statement[RatingTable.rating] = rating.rating
                         statement[maxRating] = rating.maxRating
                         statement[rateTime] = rating.rateTime
-                        statement[TrackRatingTable.userId] = userId
+                        statement[RatingTable.userId] = userId
                     }
                 }
             }
@@ -126,13 +126,13 @@ class DatabaseRatingRepository(
     }
 
     private fun lastRatingOf(id: String, userId: String = userRepository.requireCurrentUserId): Rating? {
-        return TrackRatingTable
+        return RatingTable
             .single(
-                column1 = TrackRatingTable.rating,
-                column2 = TrackRatingTable.maxRating,
-                column3 = TrackRatingTable.rateTime,
-                where = { (TrackRatingTable.track eq id) and (TrackRatingTable.userId eq userId) },
-                order = TrackRatingTable.rateTime to SortOrder.DESC,
+                column1 = RatingTable.rating,
+                column2 = RatingTable.maxRating,
+                column3 = RatingTable.rateTime,
+                where = { (RatingTable.spotifyEntity eq id) and (RatingTable.userId eq userId) },
+                order = RatingTable.rateTime to SortOrder.DESC,
             )
             ?.let { Rating(rating = it.first, maxRating = it.second, rateTime = it.third) }
     }

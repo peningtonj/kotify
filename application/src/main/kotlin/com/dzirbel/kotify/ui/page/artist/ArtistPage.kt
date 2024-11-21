@@ -24,6 +24,7 @@ import com.dzirbel.kotify.db.model.AlbumType
 import com.dzirbel.kotify.repository.SavedRepository
 import com.dzirbel.kotify.repository.artist.ArtistAlbumViewModel
 import com.dzirbel.kotify.repository.artist.ArtistViewModel
+import com.dzirbel.kotify.repository.rating.RatingRepository
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
 import com.dzirbel.kotify.ui.LocalAlbumTracksRepository
 import com.dzirbel.kotify.ui.LocalArtistAlbumsRepository
@@ -150,6 +151,7 @@ data class ArtistPage(val artistId: String) : Page {
                     AlbumCell(
                         album = artistAlbum.album,
                         onClick = { pageStack.mutate { to(AlbumPage(albumId = artistAlbum.album.id)) } },
+                        ratingRepository = LocalRatingRepository.current,
                     )
                 }
             } else {

@@ -90,7 +90,7 @@ class DatabaseAlbumPlaylistAlbumsRepository(
         override suspend fun fetchFromRemote(id: String): List<SpotifyAlbum> {
             trackRepository.refreshFromRemote("6xXAl2w0mqyxsRB8ak2S7N").join()
             albumRepository.refreshFromRemote("5zFOVxtYkKdqwYdG9bASRR").join()
-            playlistRepository.refreshFromRemote(id)
+            playlistRepository.refreshFromRemote(id).join()
 
             val tracks = Spotify.Playlists.getPlaylistTracks(playlistId = id).asFlow().toList()
             val albums: List<SpotifyAlbum> =
