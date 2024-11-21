@@ -65,7 +65,7 @@ object ReorderCalculator {
         return result
     }
 
-    fun combineContiguousReorderOperations(unoptimised: MutableList<ReorderOperation>) : MutableList<ReorderOperation> {
+    private fun combineContiguousReorderOperations(unoptimised: MutableList<ReorderOperation>) : MutableList<ReorderOperation> {
         val result = mutableListOf<ReorderOperation>()
 
         if (unoptimised.isNotEmpty()) {
