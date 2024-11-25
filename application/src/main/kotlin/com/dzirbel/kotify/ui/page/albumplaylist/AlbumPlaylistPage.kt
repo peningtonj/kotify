@@ -17,7 +17,6 @@ import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistAlbumViewModel
 import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
-import com.dzirbel.kotify.repository.playlist.PlaylistRepository
 import com.dzirbel.kotify.repository.playlist.PlaylistTrackViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
@@ -68,10 +67,6 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
             },
         )
 
-        val transitionAlbumId = albumPlaylist?.nextAlbumTrack?.albumId
-        val nextAlbumTrackAlbum =
-            LocalAlbumRepository.current.stateOf(id = transitionAlbumId!!).collectAsState().value?.cachedValue
-
         val playlistTracksAdapter = rememberListAdapterState(
             key = albumPlaylistId,
             defaultSort = PlaylistDirectSortIndexProperty,
@@ -93,10 +88,8 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
             },
         )
 
-        var transitionInPlaylist = playlistTracksAdapter.value.map {track -> track.track?.id}.contains(albumPlaylist.nextAlbumTrackId)
+        var transitionInPlaylist = playlistTracksAdapter.value.map {track -> track.track?.id}.contains(albumPlaylist?.nextAlbumTrackId)
         val playlistSnapshot = playlistTracksAdapter.value.toList()
-
-
 
         DisplayNormalPage(
             title = "Included Albums",
@@ -104,12 +97,12 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                 AlbumPlaylistHeader(
                     albumPlaylistId = albumPlaylistId,
                     albumPlaylist = albumPlaylist,
-                    nextAlbumTrackAlbum = nextAlbumTrackAlbum
+                    nextAlbumTrackAlbum = albumPlaylist?.nextAlbumTrack?.album?.value
                 )
             },
         ) {
-            Row () {
-
+            if ((albumPlaylistAlbumsAdapter.derived { it.hasElements }.value)){
+                Row () {
                 AlbumPlaylistReorderButton(
                     reorder = {
                         playlistTracksRepository.reorder(
@@ -133,85 +126,89 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                     onFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
                     enabledText = "Sync with remote",
                 )
-                AlbumPlaylistButton(
-                    func = {
-                        playlistTracksRepository.addAtIndexes(
-                            playlistId = albumPlaylistId,
-                            track = albumPlaylist.nextAlbumTrack!!,
-                            indexOnPlaylist = albumPlaylistAlbumsAdapter.value.map { album ->
-                                album.album?.totalTracks!!
-                            }.runningFold(-1) { acc, num -> acc + num + 1 }.drop(1)
+                    if (albumPlaylist?.nextAlbumTrack != null) {
+                        AlbumPlaylistButton(
+                            func = {
+                                playlistTracksRepository.addAtIndexes(
+                                    playlistId = albumPlaylistId,
+                                    track = albumPlaylist?.nextAlbumTrack!!,
+                                    indexOnPlaylist = albumPlaylistAlbumsAdapter.value.map { album ->
+                                        album.album?.totalTracks!!
+                                    }.runningFold(-1) { acc, num -> acc + num + 1 }.drop(1)
+                                )
+                            },
+                            // TODO doesn't seem quite right... just revert to order by index on playlist?
+                            onFinish = {
+                                transitionInPlaylist = true
+                            },
+                            enabledText = "Add Transition Track",
+                            enabled = !transitionInPlaylist
                         )
-                    },
-                    // TODO doesn't seem quite right... just revert to order by index on playlist?
-                    onFinish = {
-                        transitionInPlaylist = true
-                    },
-                    enabledText = "Add Transition Track",
-                    enabled = !transitionInPlaylist
-                )
-                AlbumPlaylistButton(
-                    func = {
-                        playlistTracksRepository.removeTrack(
-                            playlistId = albumPlaylistId,
-                            track = albumPlaylist.nextAlbumTrack!!,
+                        AlbumPlaylistButton(
+                            func = {
+                                playlistTracksRepository.removeTrack(
+                                    playlistId = albumPlaylistId,
+                                    track = albumPlaylist?.nextAlbumTrack!!,
+                                )
+                            },
+                            // TODO doesn't seem quite right... just revert to order by index on playlist?
+                            onFinish = {
+                                transitionInPlaylist = false
+                            },
+                            enabledText = "Remove Transition Track",
+                            enabled = transitionInPlaylist
                         )
-                    },
-                    // TODO doesn't seem quite right... just revert to order by index on playlist?
-                    onFinish = {
-                        transitionInPlaylist = false
-                    },
-                    enabledText = "Remove Transition Track",
-                    enabled = transitionInPlaylist
-                )
+                    }
             }
-            if (albumPlaylistAlbumsAdapter.derived { it.hasElements }.value) {
                 val data =
                     remember { mutableStateOf(List(albumPlaylistAlbumsAdapter.value.size) { id -> albumPlaylistAlbumsAdapter.value[id]!! }) }
-                val state = rememberReorderableLazyGridState(
-                    onMove = { from, to ->
-                        data.value = data.value.toMutableList().apply {
-                            add(to.index, removeAt(from.index))
-                        }
-                        playlistTracksAdapter.value.map { track ->
-                            track.apply {
-                                directSortIndex = data.value.map { album -> album.album?.id }
-                                    .indexOf(track.track?.album?.value?.id) * 100 + track.track?.trackNumber!!
+                if (data.value.isNotEmpty()) {
+                    val state = rememberReorderableLazyGridState(
+                        onMove = { from, to ->
+                            data.value = data.value.toMutableList().apply {
+                                add(to.index, removeAt(from.index))
                             }
-                        }
-                        playlistTracksAdapter.value.filter { track -> track.track?.id == albumPlaylist.nextAlbumTrack?.id }
-                            .mapIndexed { index, track ->
+                            playlistTracksAdapter.value.map { track ->
                                 track.apply {
-                                    directSortIndex = index * 100 - 1
+                                    directSortIndex = data.value.map { album -> album.album?.id }
+                                        .indexOf(track.track?.album?.value?.id) * 100 + track.track?.trackNumber!!
                                 }
                             }
-                    })
-                AlbumPlaylistShuffle(
-                    playlistTracksAdapter = playlistTracksAdapter,
-                    albums = data,
-                    albumPlaylist = albumPlaylist
-                )
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    state = state.gridState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.reorderable(state)
-                ) {
-                    items(data.value, { it }) { album ->
-                        ReorderableItem(state, key = album, defaultDraggingModifier = Modifier) { isDragging ->
-                            val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
-                            val firstTrack = playlistTracksAdapter.value.find { track -> (track.track?.album?.value?.id == album.album?.id) and (track.track?.trackNumber == 1) }
-                            AlbumCell(
-                                album = album.album!!,
-                                firstTrack = firstTrack,
-                                albumPlaylist = albumPlaylist,
-                                ratingRepository = LocalRatingRepository.current,
-                                onClick = { pageStack.mutate { to(AlbumPage(albumId = album.album!!.id)) } },
-                                modifier = Modifier.detectReorderAfterLongPress(state)
-                                    .shadow(elevation.value)
-                            )
+                            playlistTracksAdapter.value.filter { track -> track.track?.id == albumPlaylist?.nextAlbumTrack?.id }
+                                .mapIndexed { index, track ->
+                                    track.apply {
+                                        directSortIndex = index * 100 - 1
+                                    }
+                                }
+                        })
+                    AlbumPlaylistShuffle(
+                        playlistTracksAdapter = playlistTracksAdapter,
+                        albums = data,
+                        albumPlaylist = albumPlaylist
+                    )
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        state = state.gridState,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.reorderable(state)
+                    ) {
+                        items(data.value, { it }) { album ->
+                            ReorderableItem(state, key = album, defaultDraggingModifier = Modifier) { isDragging ->
+                                val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                                val firstTrack =
+                                    playlistTracksAdapter.value.find { track -> (track.track?.album?.value?.id == album.album?.id) and (track.track?.trackNumber == 1) }
+                                AlbumCell(
+                                    album = album.album!!,
+                                    firstTrack = firstTrack,
+                                    albumPlaylist = albumPlaylist,
+                                    ratingRepository = LocalRatingRepository.current,
+                                    onClick = { pageStack.mutate { to(AlbumPage(albumId = album.album!!.id)) } },
+                                    modifier = Modifier.detectReorderAfterLongPress(state)
+                                        .shadow(elevation.value)
+                                )
 
+                            }
                         }
                     }
                 }
@@ -287,7 +284,7 @@ private fun AlbumPlaylistHeader(
 private fun AlbumPlaylistShuffle(
     playlistTracksAdapter: ListAdapterState<PlaylistTrackViewModel>,
     albums:  MutableState<List<AlbumPlaylistAlbumViewModel>>,
-    albumPlaylist: AlbumPlaylistViewModel
+    albumPlaylist: AlbumPlaylistViewModel?
 ) {
     SimpleTextButton(
         onClick = {
@@ -298,7 +295,7 @@ private fun AlbumPlaylistShuffle(
                 track.directSortIndex = (albumOrder.indexOf(track.track?.album?.value?.id) * 100) + track.track?.trackNumber!!
             }
 
-            playlistTracksAdapter.value.filter { track -> track.track?.id == albumPlaylist.nextAlbumTrack?.id }
+            playlistTracksAdapter.value.filter { track -> track.track?.id == albumPlaylist?.nextAlbumTrack?.id }
                 .mapIndexed { index, track ->
                     track.apply {
                         directSortIndex = (index + 1) * 100 - 1

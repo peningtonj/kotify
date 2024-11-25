@@ -12,14 +12,6 @@ import com.dzirbel.kotify.repository.album.DatabaseAlbumRepository
 import com.dzirbel.kotify.repository.album.DatabaseAlbumTracksRepository
 import com.dzirbel.kotify.repository.album.DatabaseSavedAlbumRepository
 import com.dzirbel.kotify.repository.album.SavedAlbumRepository
-import com.dzirbel.kotify.repository.artist.ArtistAlbumsRepository
-import com.dzirbel.kotify.repository.artist.ArtistRepository
-import com.dzirbel.kotify.repository.artist.ArtistTracksRepository
-import com.dzirbel.kotify.repository.artist.DatabaseArtistAlbumsRepository
-import com.dzirbel.kotify.repository.artist.DatabaseArtistRepository
-import com.dzirbel.kotify.repository.artist.DatabaseArtistTracksRepository
-import com.dzirbel.kotify.repository.artist.DatabaseSavedArtistRepository
-import com.dzirbel.kotify.repository.artist.SavedArtistRepository
 import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.player.PlayerRepository
 import com.dzirbel.kotify.repository.playlist.DatabasePlaylistRepository
@@ -34,6 +26,7 @@ import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistRepository
 import com.dzirbel.kotify.repository.albumplaylist.DatabaseSavedAlbumPlaylistRepository
 import com.dzirbel.kotify.repository.albumplaylist.DatabaseAlbumPlaylistRepository
 import com.dzirbel.kotify.repository.albumplaylist.SavedAlbumPlaylistRepository
+import com.dzirbel.kotify.repository.artist.*
 import com.dzirbel.kotify.repository.rating.DatabaseRatingRepository
 import com.dzirbel.kotify.repository.rating.RatingRepository
 import com.dzirbel.kotify.repository.track.DatabaseSavedTrackRepository
@@ -48,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 val LocalArtistRepository = staticCompositionLocalOf<ArtistRepository> { error("not provided") }
 val LocalArtistAlbumsRepository = staticCompositionLocalOf<ArtistAlbumsRepository> { error("not provided") }
 val LocalArtistTracksRepository = staticCompositionLocalOf<ArtistTracksRepository> { error("not provided") }
+val LocalSimilarArtistsRepository = staticCompositionLocalOf<SimilarArtistsRepository> { error("not provided") }
 val LocalAlbumRepository = staticCompositionLocalOf<AlbumRepository> { error("not provided") }
 val LocalAlbumTracksRepository = staticCompositionLocalOf<AlbumTracksRepository> { error("not provided") }
 val LocalPlaylistRepository = staticCompositionLocalOf<PlaylistRepository> { error("not provided") }
@@ -71,8 +65,10 @@ val LocalPlayer = staticCompositionLocalOf<Player> { error("not provided") }
 fun ProvideRepositories(content: @Composable () -> Unit) {
     val scope = rememberCoroutineScope { Dispatchers.Computation }
 
+
     val artistRepository = DatabaseArtistRepository(scope)
     val artistTracksRepository = DatabaseArtistTracksRepository(scope)
+    val similarArtistsRepository = DatabaseSimilarArtistsRepository(scope, artistRepository)
 
     lateinit var albumRepository: AlbumRepository
 
@@ -103,7 +99,7 @@ fun ProvideRepositories(content: @Composable () -> Unit) {
     val albumPlaylistRepository = DatabaseAlbumPlaylistRepository(scope, albumPlaylistAlbumsRepository, userRepository)
 
     val savedAlbumRepository = DatabaseSavedAlbumRepository(scope, userRepository, albumRepository)
-    val savedArtistRepository = DatabaseSavedArtistRepository(scope, userRepository, artistRepository)
+    val savedArtistRepository = DatabaseSavedArtistRepository(scope, userRepository, artistRepository, similarArtistsRepository)
     val savedPlaylistRepository = DatabaseSavedPlaylistRepository(scope, userRepository, playlistRepository)
     val savedAlbumPlaylistRepository = DatabaseSavedAlbumPlaylistRepository(scope, userRepository, albumPlaylistRepository)
     val savedTrackRepository = DatabaseSavedTrackRepository(scope, userRepository, trackRepository)
@@ -123,6 +119,8 @@ fun ProvideRepositories(content: @Composable () -> Unit) {
         LocalArtistRepository provides artistRepository,
         LocalArtistAlbumsRepository provides artistAlbumsRepository,
         LocalArtistTracksRepository provides artistTracksRepository,
+        LocalSimilarArtistsRepository provides similarArtistsRepository,
+
         LocalAlbumRepository provides albumRepository,
         LocalAlbumTracksRepository provides albumTracksRepository,
         LocalPlaylistRepository provides playlistRepository,

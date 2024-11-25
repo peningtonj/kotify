@@ -1,10 +1,11 @@
 package com.dzirbel.kotify.ui.page.releaseradar
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import com.dzirbel.kotify.db.model.AlbumType
 import com.dzirbel.kotify.repository.CacheState
-import com.dzirbel.kotify.repository.artist.ArtistAlbumViewModel
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
 import com.dzirbel.kotify.repository.util.ReleaseDate
 import com.dzirbel.kotify.ui.*
@@ -18,19 +19,21 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.LocalDate
-import androidx.compose.material.Text
 import androidx.compose.ui.Modifier
 import com.dzirbel.kotify.repository.album.AlbumViewModel
+import com.dzirbel.kotify.repository.artist.ArtistRecommendationEngine
+import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow
 import com.dzirbel.kotify.ui.album.AlbumCell
 import com.dzirbel.kotify.ui.album.AlbumTypePicker
 import com.dzirbel.kotify.ui.components.*
 import com.dzirbel.kotify.ui.components.adapter.*
 import com.dzirbel.kotify.ui.components.grid.Grid
+import com.dzirbel.kotify.ui.components.table.Column
 import com.dzirbel.kotify.ui.page.album.AlbumPage
 import com.dzirbel.kotify.ui.page.albums.albumCellImageSize
+import com.dzirbel.kotify.ui.page.artists.artistCellImageSize
 import com.dzirbel.kotify.util.immutable.countBy
 import kotlinx.collections.immutable.PersistentSet
-import kotlinx.coroutines.flow.mapNotNull
 
 data object ReleaseRadar : Page {
     @Composable
@@ -40,9 +43,9 @@ data object ReleaseRadar : Page {
         val savedArtistRepository = LocalSavedArtistRepository.current
         val artistRepository = LocalArtistRepository.current
         val artistAlbumsRepository = LocalArtistAlbumsRepository.current
-        val savedAlbumRepository = LocalSavedAlbumRepository.current
         val albumRepository = LocalAlbumRepository.current
 
+        val recommendationEngine = ArtistRecommendationEngine()
 
         val displayedAlbumTypes = remember { mutableStateOf(persistentSetOf(AlbumType.ALBUM)) }
 
@@ -67,16 +70,36 @@ data object ReleaseRadar : Page {
             }
         }
 
-        val imageSize = Dimens.contentImage.toImageSize()
-        val artistsAlbums = rememberListAdapterState(
-            source = { scope ->
-                artistAlbumsRepository.statesOf(artistsAdapter.value.map {it.id})
-                    .combinedStateWhenAllNotNull { it?.cachedValue }
 
+        val similarArtistsAdapter = rememberListAdapterState(scope = scope) {
+            val similarArtistIds = recommendationEngine.similarArtistsRecommendation(artistsAdapter.value.map { it }).filter { it.second > 2 }
+            artistRepository.statesOf(similarArtistIds.map { it.first.id })
+                .combinedStateWhenAllNotNull { it?.cachedValue }
+        }
+
+        val similarArtistsAlbums = rememberListAdapterState(
+            source = { scope ->
+                artistAlbumsRepository.statesOf(similarArtistsAdapter.value.map { it.id })
+                    .combinedStateWhenAllNotNull { it?.cachedValue }
             }
         )
 
-        val albumIds = artistsAlbums.value.flatMap { it.artistAlbums }.map { it.album }.filter { checkRelease(it.parsedReleaseDate!!) }
+
+        val imageSize = Dimens.contentImage.toImageSize()
+        val artistsAlbums = rememberListAdapterState(
+            source = { scope ->
+                artistAlbumsRepository.statesOf(artistsAdapter.value.map { it.id })
+                    .combinedStateWhenAllNotNull { it?.cachedValue }
+            }
+        )
+
+        val albumIds = artistsAlbums.value.flatMap { it.artistAlbums }.map { it.album }
+            .filter { checkRelease(it.parsedReleaseDate!!) }.distinct()
+            .filter { it.albumType != AlbumType.COMPILATION }
+
+        val similarAlbumIds = similarArtistsAlbums.value.flatMap { it.artistAlbums }.map { it.album }
+            .filter { checkRelease(it.parsedReleaseDate!!) }.distinct()
+            .filter { it.albumType != AlbumType.COMPILATION }
 
         val newReleases = rememberListAdapterState(
             defaultSort = AlbumNameProperty,
@@ -98,6 +121,31 @@ data object ReleaseRadar : Page {
                 }
             }
         }
+
+        val similarNewReleases = rememberListAdapterState(
+            defaultSort = AlbumNameProperty,
+            defaultFilter = filterFor(displayedAlbumTypes.value),
+            scope = scope
+        ) {
+            displayedLibraryFlow.flatMapLatestIn(scope) { cacheState ->
+                if (similarAlbumIds.isEmpty()) {
+                    MutableStateFlow(if (cacheState is CacheState.Error) emptyList() else null)
+                } else {
+                    albumRepository.statesOf(similarAlbumIds.map { it.id })
+                        .combinedStateWhenAllNotNull { it?.cachedValue }
+                        .onEachIn(scope) { albums ->
+                            albums?.requestBatched(
+                                transactionName = { "load $it albums images for $albumCellImageSize" },
+                                extractor = { it.imageUrlFor(imageSize) },
+                            )
+                            albums?.requestBatched(
+                                transactionName = { "$it album artists" },
+                                extractor = { LazyTransactionStateFlow("$it album artists") { it.artists } },
+                            )
+                        }
+                }
+            }
+        }
         LocalSavedAlbumRepository.current.rememberSavedStates(newReleases.value) { it.id }
 
         DisplayVerticalScrollPage(
@@ -109,13 +157,34 @@ data object ReleaseRadar : Page {
                     setDisplayedAlbumTypes = { types ->
                         displayedAlbumTypes.value = types
                         newReleases.withFilter(filterFor(types))
+                        similarNewReleases.withFilter(filterFor(types))
                     },
                 )
             },
         ) {
             if (newReleases.derived { it.hasElements }.value) {
+                Text("Followed Artists", style = MaterialTheme.typography.h5)
                 Grid(
                     elements = newReleases.value,
+                    edgePadding = PaddingValues(
+                        start = Dimens.space5 - Dimens.space3,
+                        end = Dimens.space5 - Dimens.space3,
+                        bottom = Dimens.space3,
+                    ),
+                ) { _, album ->
+                    AlbumCell(
+                        album = album,
+                        onClick = { pageStack.mutate { to(AlbumPage(albumId = album.id)) } },
+                        ratingRepository = LocalRatingRepository.current,
+                        fullReleaseDate = true,
+                        showArtist = true,
+                    )
+                }
+            }
+            if (similarNewReleases.derived { it.hasElements }.value) {
+                Text("Recommended Artists", style = MaterialTheme.typography.h5)
+                Grid(
+                    elements = similarNewReleases.value,
                     edgePadding = PaddingValues(
                         start = Dimens.space5 - Dimens.space3,
                         end = Dimens.space5 - Dimens.space3,
@@ -126,9 +195,12 @@ data object ReleaseRadar : Page {
                         album = artistAlbum,
                         onClick = { pageStack.mutate { to(AlbumPage(albumId = artistAlbum.id)) } },
                         ratingRepository = LocalRatingRepository.current,
+                        fullReleaseDate = true,
+                        showArtist = true,
                     )
                 }
-            } else {
+            }
+            if (!similarNewReleases.derived { it.hasElements }.value and !newReleases.derived { it.hasElements }.value) {
                 PageLoadingSpinner()
             }
         }
@@ -163,21 +235,26 @@ private fun ReleaseRadarHeader(
     displayedAlbumTypes: PersistentSet<AlbumType>,
     setDisplayedAlbumTypes: (PersistentSet<AlbumType>) -> Unit,
 ) {
+
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.space5, vertical = Dimens.space4),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.spacedBy(Dimens.space2),
     ) {
-        Row(
-            modifier = Modifier.padding(Dimens.space4),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
-        ) {
-            val albumTypeCounts = albums.derived { it.countBy { artistAlbum -> artistAlbum.albumType } }.value
-            AlbumTypePicker(
-                albumTypeCounts = albumTypeCounts,
-                albumTypes = displayedAlbumTypes,
-                onSelectAlbumTypes = { setDisplayedAlbumTypes(it) },
-            )
+        Column {
+            Text("Release Radar", style = MaterialTheme.typography.h4)
+
+            Row(
+                modifier = Modifier.padding(Dimens.space4),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
+            ) {
+                val albumTypeCounts = albums.derived { it.countBy { artistAlbum -> artistAlbum.albumType } }.value
+                AlbumTypePicker(
+                    albumTypeCounts = albumTypeCounts,
+                    albumTypes = displayedAlbumTypes,
+                    onSelectAlbumTypes = { setDisplayedAlbumTypes(it) },
+                )
+            }
         }
     }
 }

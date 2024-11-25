@@ -35,6 +35,9 @@ import com.dzirbel.kotify.ui.components.star.StarRating
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.theme.KotifyColors
 import com.dzirbel.kotify.ui.util.instrumentation.instrument
+import kotlinx.coroutines.flow.map
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun AlbumCell(
@@ -44,7 +47,9 @@ fun AlbumCell(
     ratingRepository: RatingRepository,
     firstTrack: PlaylistTrackViewModel? = null,
     albumPlaylist: AlbumPlaylistViewModel? = null,
-    showRating: Boolean = true
+    showRating: Boolean = true,
+    fullReleaseDate: Boolean = false,
+    showArtist: Boolean = false,
 ) {
 
     Column(
@@ -80,6 +85,22 @@ fun AlbumCell(
             }
         }
 
+        if (showArtist) {
+            Row(
+                modifier = Modifier.widthIn(max = Dimens.contentImage),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space2),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+                    var artists = album.artists.collectAsState().value?.sortedBy { it.popularity }?.reversed()
+                    val artistsSize = artists?.size ?: 0
+                    if (artistsSize > 3) {
+                        artists = artists?.take(3)
+                    }
+                    Text(text = artists?.map{ it.name }?.joinToString(separator = ", ") { it }.toString())
+                }
+            }
+        }
         Row(
             modifier = Modifier.widthIn(max = Dimens.contentImage),
             horizontalArrangement = Arrangement.spacedBy(Dimens.space2),
@@ -95,7 +116,7 @@ fun AlbumCell(
                 }
 
                 album.parsedReleaseDate?.let { releaseDate ->
-                    Text(text = releaseDate.year.toString())
+                    Text(text = if(fullReleaseDate) releaseDate.toString() else releaseDate.year.toString())
                 }
 
                 if (album.parsedReleaseDate != null && album.totalTracks != null) {
@@ -135,19 +156,19 @@ fun albumPlaylistPlayIcon(
             contentDescription = "Playing",
             tint = MaterialTheme.colors.primary,
         )
-    } else {
+    } else if (firstTrack != null) {
         IconButton(
             onClick = {
                 player.play(
                     context = Player.PlayContext.playlistTrack(
                         albumPlaylist!!,
-                        firstTrack?.indexOnPlaylist!!
+                        firstTrack.indexOnPlaylist
                     )
                 )
             },
             enabled = Player.PlayContext.playlistTrack(
                 albumPlaylist!!,
-                firstTrack?.indexOnPlaylist!!
+                firstTrack.indexOnPlaylist
             ) != null,
         ) {
             CachedIcon(
@@ -156,6 +177,13 @@ fun albumPlaylistPlayIcon(
                 contentDescription = "Play",
             )
         }
+    } else {
+            CachedIcon(
+                name = "error",
+                size = Dimens.iconSmall,
+                contentDescription = "No First Track",
+
+                )
     }
 }
 

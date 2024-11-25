@@ -315,11 +315,11 @@ object Spotify {
          *
          * @param id The Spotify ID of the artist.
          */
-        suspend fun getArtistRelatedArtists(id: String): List<FullSpotifyArtist> {
+        suspend fun getArtistRelatedArtists(id: String): List<SimilarSpotifyArtist> {
             @Serializable
             data class ArtistsModel(val artists: List<FullSpotifyArtist>)
 
-            return get<ArtistsModel>("artists/$id/related-artists").artists
+            return get<ArtistsModel>("artists/$id/related-artists").artists.map{ it.toSimilarSpotifyArtist(id) }
         }
     }
 

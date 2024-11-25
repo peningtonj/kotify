@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.exposed.dao)
     implementation(libs.exposed.javatime)
     implementation(libs.kotlinx.coroutines.core)
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
 
     testFixturesImplementation(project(":util"))
     testFixturesImplementation(testFixtures(project(":db")))

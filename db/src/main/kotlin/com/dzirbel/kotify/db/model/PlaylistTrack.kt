@@ -47,6 +47,7 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
                 ?: new {
                     this.trackId = EntityID(id = trackId, table = TrackTable)
                     this.playlistId = EntityID(id = playlistId, table = PlaylistTable)
+                    this.indexOnPlaylist = indexOnPlaylist
                 }
         }
 

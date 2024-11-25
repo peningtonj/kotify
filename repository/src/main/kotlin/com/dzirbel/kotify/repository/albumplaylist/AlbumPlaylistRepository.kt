@@ -32,10 +32,7 @@ class DatabaseAlbumPlaylistRepository(
 
     fun getAlbum(track: SpotifyPlaylistTrack): SimplifiedSpotifyAlbum? {
         val spotifyTrack = track.track as SimplifiedSpotifyTrack
-        if (spotifyTrack.album?.name != "Turntables & Phonographs Sound Effects") {
-            return spotifyTrack.album
-        }
-        return null
+        return spotifyTrack.album
     }
 
     override fun convertToDB(id: String, networkModel: SpotifyPlaylist, fetchTime: Instant): AlbumPlaylist {
@@ -53,14 +50,12 @@ class DatabaseAlbumPlaylistRepository(
                 networkModel.tracks.items.mapNotNull { track ->
                     getAlbum(track)
                 }.distinct().mapIndexedNotNull {index, album ->
-                        if (album.name != "Turntable & Phonographs Sound Effects") {
                             albumPlaylistAlbumsRepository.convertAlbum(
                                 spotifyAlbum = album,
-                                albumPlaylistId = networkModel.id,
+                                albumPlaylistId = if(album.name.contains("Sound Effects")) "" else networkModel.id,
                                 index = index,
                                 fetchTime = fetchTime,
                             )
-                        }
                     }
                 }
 

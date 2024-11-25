@@ -10,18 +10,24 @@ import com.dzirbel.kotify.network.model.SpotifyArtist
 import com.dzirbel.kotify.repository.ConvertingRepository
 import com.dzirbel.kotify.repository.DatabaseEntityRepository
 import com.dzirbel.kotify.repository.Repository
+import com.dzirbel.kotify.repository.convertToDB
 import com.dzirbel.kotify.repository.util.updateOrInsert
 import com.dzirbel.kotify.util.coroutines.flatMapParallel
 import kotlinx.coroutines.CoroutineScope
+import org.jetbrains.exposed.sql.emptySized
 import java.time.Instant
 
 interface ArtistRepository : Repository<ArtistViewModel>, ConvertingRepository<Artist, SpotifyArtist>
 
-class DatabaseArtistRepository(scope: CoroutineScope) :
+class DatabaseArtistRepository(
+    scope: CoroutineScope
+) :
     DatabaseEntityRepository<ArtistViewModel, Artist, SpotifyArtist>(entityClass = Artist, scope = scope),
     ArtistRepository {
 
-    override suspend fun fetchFromRemote(id: String) = Spotify.Artists.getArtist(id = id)
+    override suspend fun fetchFromRemote(id: String) : SpotifyArtist {
+        return Spotify.Artists.getArtist(id = id)
+    }
     override suspend fun fetchFromRemote(ids: List<String>): List<SpotifyArtist?> {
         return ids.chunked(size = Spotify.MAX_LIMIT)
             .flatMapParallel { idsChunk -> Spotify.Artists.getArtists(ids = idsChunk) }

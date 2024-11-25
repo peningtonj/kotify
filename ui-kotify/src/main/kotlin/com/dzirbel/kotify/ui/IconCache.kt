@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentMap
  * Mainly exists to ensure [size] is passed appropriately; see [IconCache.load].
  */
 @Composable
-fun CachedIcon(
+fun     CachedIcon(
     name: String,
     modifier: Modifier = Modifier,
     size: Dp? = Dimens.iconMedium,

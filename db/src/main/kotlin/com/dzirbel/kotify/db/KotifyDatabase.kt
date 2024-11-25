@@ -33,6 +33,7 @@ enum class DB(vararg val tables: Table) {
         ArtistTable.ArtistGenreTable,
         ArtistTable.ArtistImageTable,
         ArtistTable.SavedArtistsTable,
+        ArtistTable.SimilarArtistsTable,
         ArtistAlbumTable,
         GenreTable,
         GlobalUpdateTimesTable,

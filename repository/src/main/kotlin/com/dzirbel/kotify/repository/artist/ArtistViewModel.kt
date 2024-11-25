@@ -27,6 +27,7 @@ data class ArtistViewModel(
         Genre.entitiesFor(id, ArtistTable.ArtistGenreTable.artist).map(::GenreViewModel)
     },
     val images: ImageViewModel = EntityImageViewModel(id, ArtistTable.ArtistImageTable.artist),
+    val similarArtists: List<ArtistViewModel>
 ) : EntityViewModel, ImageViewModel by images {
 
     constructor(artist: Artist) : this(
@@ -37,6 +38,7 @@ data class ArtistViewModel(
         fullUpdatedTime = artist.fullUpdatedTime,
         popularity = artist.popularity,
         followersTotal = artist.followersTotal,
+        similarArtists = artist.similarArtists.map(::ArtistViewModel)
     )
 
     override fun equals(other: Any?) = other is ArtistViewModel && id == other.id

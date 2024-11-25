@@ -19,6 +19,7 @@ class DatabaseSavedArtistRepository(
     scope: CoroutineScope,
     userRepository: UserRepository,
     private val artistRepository: ArtistRepository,
+    private val similarArtistsRepository: SimilarArtistsRepository,
 ) :
     DatabaseSavedRepository<FullSpotifyArtist>(
         savedEntityTable = ArtistTable.SavedArtistsTable,
@@ -42,9 +43,11 @@ class DatabaseSavedArtistRepository(
     }
 
     override suspend fun fetchLibrary(): Iterable<FullSpotifyArtist> {
-        return Spotify.Follow.getFollowedArtists(limit = Spotify.MAX_LIMIT)
+        val artists = Spotify.Follow.getFollowedArtists(limit = Spotify.MAX_LIMIT)
             .asFlow { url -> Spotify.get<Spotify.Follow.ArtistsCursorPagingModel>(url).artists }
             .toList()
+        artists.map {similarArtistsRepository.refreshFromRemote(it.id).join()}
+        return artists
     }
 
     override fun convertToDB(savedNetworkType: FullSpotifyArtist, fetchTime: Instant): Pair<String, Instant?> {

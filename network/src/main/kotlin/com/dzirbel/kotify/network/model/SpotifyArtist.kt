@@ -59,4 +59,52 @@ data class FullSpotifyArtist(
      * popularity is calculated from the popularity of all the artist’s tracks.
      */
     val popularity: Int,
+
 ) : SpotifyArtist
+
+@Serializable
+data class SimilarSpotifyArtist(
+    @SerialName("external_urls") override val externalUrls: SpotifyExternalUrl,
+    override val href: String,
+    override val id: String,
+    override val name: String,
+    override val type: String,
+    override val uri: String,
+
+    /** Information about the followers of the artist. */
+    val followers: SpotifyFollowers,
+
+    /**
+     * A list of the genres the artist is associated with. For example: "Prog Rock" , "Post-Grunge". (If not yet
+     * classified, the array is empty.)
+     */
+    val genres: List<String>,
+
+    /** Images of the artist in various sizes, widest first. */
+    val images: List<SpotifyImage>,
+
+    /**
+     * The popularity of the artist. The value will be between 0 and 100, with 100 being the most popular. The artist’s
+     * popularity is calculated from the popularity of all the artist’s tracks.
+     */
+    val popularity: Int,
+
+    var similarToId: String,
+
+    ) : SpotifyArtist
+
+fun FullSpotifyArtist.toSimilarSpotifyArtist(similarToId: String): SimilarSpotifyArtist {
+    return SimilarSpotifyArtist(
+        externalUrls = this.externalUrls,
+        href = this.href,
+        id = this.id,
+        name = this.name,
+        type = this.type,
+        uri = this.uri,
+        followers = this.followers,
+        genres = this.genres,
+        images = this.images,
+        popularity = this.popularity,
+        similarToId = similarToId
+    )
+}

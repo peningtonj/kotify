@@ -38,7 +38,6 @@ interface AlbumPlaylistAlbumsRepository :
      */
     fun convertAlbum(
         spotifyAlbum: SpotifyAlbum,
-//        sampleTrack: SpotifyPlaylistTrack,
         albumPlaylistId: String,
         index: Int,
         fetchTime: Instant,
@@ -88,14 +87,12 @@ class DatabaseAlbumPlaylistAlbumsRepository(
 
 
         override suspend fun fetchFromRemote(id: String): List<SpotifyAlbum> {
-            trackRepository.refreshFromRemote("6xXAl2w0mqyxsRB8ak2S7N").join()
-            albumRepository.refreshFromRemote("5zFOVxtYkKdqwYdG9bASRR").join()
             playlistRepository.refreshFromRemote(id).join()
 
             val tracks = Spotify.Playlists.getPlaylistTracks(playlistId = id).asFlow().toList()
             val albums: List<SpotifyAlbum> =
                 tracks.map { track: SpotifyPlaylistTrack -> getAlbumFromPlaylistTrack(track)!! }
-            return albums.distinct().filter { album -> album.name != "Turntables & Phonographs Sound Effects" }
+            return albums.distinct()
         }
 
         override fun convertToVM(
@@ -115,7 +112,6 @@ class DatabaseAlbumPlaylistAlbumsRepository(
         override fun convertToDB(
             id: String,
             networkModel: List<SpotifyAlbum>,
-//            networkModel: List<Pair<SpotifyAlbum, SpotifyPlaylistTrack>>,
             fetchTime: Instant,
         ): List<AlbumPlaylistAlbum> {
             AlbumPlaylistTable.update(where = { AlbumPlaylistTable.id eq id }) {
@@ -124,10 +120,8 @@ class DatabaseAlbumPlaylistAlbumsRepository(
 
             return networkModel.mapIndexedNotNull { index, spotifyAlbum ->
                 convertAlbum(
-//                    spotifyAlbum = spotifyAlbum.first,
-//                    sampleTrack = spotifyAlbum.second,
                     spotifyAlbum = spotifyAlbum,
-                    albumPlaylistId = id,
+                    albumPlaylistId = if(spotifyAlbum.name.contains("Sound Effects")) "" else id,
                     index = index,
                     fetchTime = fetchTime,
                 )
@@ -138,7 +132,6 @@ class DatabaseAlbumPlaylistAlbumsRepository(
 
         override fun convertAlbum(
             spotifyAlbum: SpotifyAlbum,
-//            sampleTrack: SpotifyPlaylistTrack,
             albumPlaylistId: String,
             index: Int,
             fetchTime: Instant,
@@ -148,9 +141,7 @@ class DatabaseAlbumPlaylistAlbumsRepository(
             }
 
             return albumPlaylistAlbum?.apply {
-//                sampleTrack.addedBy?.let { addedBy = userRepository.convertToDB(it, fetchTime) }
                 indexOnPlaylist = index
-//                sampleTrack.addedAt?.let { addedAt = it }
             }
         }
 
