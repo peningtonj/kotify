@@ -40,8 +40,9 @@ object ReorderCalculator {
     fun <T> calculateReorderOperations(list: List<T>, comparator: Comparator<T>): List<ReorderOperation> {
         if (list.size <= 1) return emptyList()
 
+        val MAX_OPERATIONS = 100
         val indexedComparator = Comparator<IndexedValue<T>> { o1, o2 -> comparator.compare(o1.value, o2.value) }
-        var unoptimised = mutableListOf<ReorderOperation>()
+        val unoptimised = mutableListOf<ReorderOperation>()
         val removedIndices = mutableSetOf<Int>()
         for (indexedValue in list.withIndex().sortedWith(indexedComparator).withIndex()) {
             val toIndex = indexedValue.index
@@ -57,15 +58,15 @@ object ReorderCalculator {
 
         val result = combineContiguousReorderOperations(unoptimised)
 
-        if (result.size > 100) {
-            println("Something went wrong and we got ${result.size} reorders")
+        if (result.size > MAX_OPERATIONS) {
             return mutableListOf<ReorderOperation>()
         }
 
         return result
     }
 
-    private fun combineContiguousReorderOperations(unoptimised: MutableList<ReorderOperation>) : MutableList<ReorderOperation> {
+    private fun combineContiguousReorderOperations(unoptimised: MutableList<ReorderOperation>)
+    : MutableList<ReorderOperation> {
         val result = mutableListOf<ReorderOperation>()
 
         if (unoptimised.isNotEmpty()) {
@@ -74,7 +75,11 @@ object ReorderCalculator {
                 val next = unoptimised.removeFirst()
                 if ((current.rangeStart + current.rangeLength == next.rangeStart) and
                     (current.insertBefore + current.rangeLength == next.insertBefore)) {
-                    current = ReorderOperation(current.rangeStart, current.rangeLength + next.rangeLength, current.insertBefore)
+                    current = ReorderOperation(
+                        current.rangeStart,
+                        current.rangeLength + next.rangeLength,
+                        current.insertBefore
+                    )
                 } else {
                     result.add(current)
                     current = next

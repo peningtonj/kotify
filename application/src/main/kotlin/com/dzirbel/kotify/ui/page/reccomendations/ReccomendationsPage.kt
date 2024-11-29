@@ -2,13 +2,17 @@ package com.dzirbel.kotify.ui.page.reccomendations
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.ContentAlpha
+import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import com.dzirbel.kotify.repository.CacheState
 import com.dzirbel.kotify.repository.artist.ArtistRecommendationEngine
+import com.dzirbel.kotify.repository.artist.ArtistViewModel
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
 import com.dzirbel.kotify.ui.*
 import com.dzirbel.kotify.ui.artist.ArtistCell
+import com.dzirbel.kotify.ui.components.adapter.ListAdapter
 import com.dzirbel.kotify.ui.components.adapter.rememberListAdapterState
 import com.dzirbel.kotify.ui.components.grid.Grid
 import com.dzirbel.kotify.ui.components.toImageSize
@@ -22,14 +26,16 @@ import com.dzirbel.kotify.ui.util.mutate
 import com.dzirbel.kotify.util.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 data object ReccommendationsPage : Page {
     @Composable
     override fun PageScope.bind() {
         val savedArtistRepository = LocalSavedArtistRepository.current
         val artistRepository = LocalArtistRepository.current
+        val similarArtistsRepository = LocalSimilarArtistsRepository.current
 
-        val recommendationEngine = ArtistRecommendationEngine()
+        val recommendationEngine = ArtistRecommendationEngine(artistRepository, similarArtistsRepository)
 
         val scope = rememberCoroutineScope { Dispatchers.Computation }
         val savedArtists = remember {
@@ -58,15 +64,28 @@ data object ReccommendationsPage : Page {
                 }
             }
 
-        val similarArtistIds = recommendationEngine.similarArtistsRecommendation(savedArtistsAdapter.value.orEmpty()).slice(0..10)
-        val similarArtistsAdapter = rememberListAdapterState(scope = scope) {
-                artistRepository.statesOf(similarArtistIds.map { it.first.id })
-                    .combinedStateWhenAllNotNull { it?.cachedValue }
-            }
+        val similarArtistIds =
+                ListAdapter.of(
+                recommendationEngine.similarArtistsRecommendation(savedArtistsAdapter.value.orEmpty())
+                    .sortedBy { it.second.count() * -1 }
+                    .slice(0..10)
+                    .map { it.first to "Similar to ${it.second.count()} artists" }
+                )
 
+        val similarToFavourite = remember {
+            mutableStateOf<ListAdapter<Pair<ArtistViewModel, String>>>(
+                ListAdapter.of(
+                    emptyList()
+                )
+            )
+        }
 
+        LaunchedEffect(Unit) {
+            similarToFavourite.value = ListAdapter.of(recommendationEngine.similiarToFavourites())
+        }
 
         var selectedArtistIndex: Int? by remember { mutableStateOf(null) }
+
 
         DisplayVerticalScrollPage(
             title = "Recommendations",
@@ -74,7 +93,7 @@ data object ReccommendationsPage : Page {
             },
         ) {
             Grid(
-                elements = similarArtistsAdapter.value,
+                elements = similarArtistIds.plusElements(similarToFavourite.value.toList()),
                 edgePadding = PaddingValues(
                     start = Dimens.space5 - Dimens.space3,
                     end = Dimens.space5 - Dimens.space3,
@@ -82,22 +101,23 @@ data object ReccommendationsPage : Page {
                 ),
                 selectedElementIndex = selectedArtistIndex,
                 detailInsertContent = { _, artist ->
-                    ArtistDetailInsert(artist = artist)
+                    ArtistDetailInsert(artist = artist.first)
                 },
                 cellContent = { index, artist ->
-                    Column() {
+                    Column {
                         ArtistCell(
-                            artist = artist,
-                            imageSize = com.dzirbel.kotify.ui.page.artists.artistCellImageSize,
+                            artist = artist.first,
+                            imageSize = artistCellImageSize,
                             onClick = {
-                                pageStack.mutate { to(ArtistPage(artistId = artist.id)) }
+                                pageStack.mutate { to(ArtistPage(artistId = artist.first.id)) }
                             },
                             onMiddleClick = {
                                 selectedArtistIndex = index.takeIf { it != selectedArtistIndex }
                             },
                         )
-                        val similarToCount = similarArtistIds.find { it.first.id == artist.id }?.second.toString()
-                        Text("Similar to $similarToCount artists")
+                        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+                            Text(artist.second)
+                        }
                     }
                 },
             )

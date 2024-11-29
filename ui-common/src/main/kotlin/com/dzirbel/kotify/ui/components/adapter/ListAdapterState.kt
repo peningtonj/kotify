@@ -79,6 +79,7 @@ class ListAdapterState<E>(
         ),
     )
 
+
     override val value: ListAdapter<E>
         get() = state.value
 
@@ -108,5 +109,9 @@ class ListAdapterState<E>(
      */
     fun withFilter(filter: ((E) -> Boolean)?) {
         mutate { withFilter(filter = filter) }
+    }
+
+    fun withFilters(filters: List<Filter<E>>) {
+        mutate {withFilters(filters.map{it.filter})}
     }
 }

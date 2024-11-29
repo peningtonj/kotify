@@ -1,10 +1,8 @@
 package com.dzirbel.kotify.repository.albumplaylist
 
 import com.dzirbel.kotify.db.model.AlbumPlaylistTable
-import com.dzirbel.kotify.db.model.PlaylistTable
 import com.dzirbel.kotify.network.Spotify
 import com.dzirbel.kotify.network.model.SpotifyPlaylist
-import com.dzirbel.kotify.network.model.asFlow
 import com.dzirbel.kotify.repository.DatabaseSavedRepository
 import com.dzirbel.kotify.repository.SavedRepository
 import com.dzirbel.kotify.repository.convertToDB
@@ -48,7 +46,11 @@ class DatabaseSavedAlbumPlaylistRepository(
     }
 
     override suspend fun fetchLibrary(): Iterable<IndexedValue<SpotifyPlaylist>> {
-        return Spotify.Playlists.getAlbumPlaylists(limit = Spotify.MAX_LIMIT).asFlow().withIndex().toList().filter { playlist -> playlist.value.description == "albums" }
+        return Spotify.Playlists.getAlbumPlaylists(limit = Spotify.MAX_LIMIT)
+            .asFlow()
+            .withIndex()
+            .toList()
+            .filter { playlist -> playlist.value.description == "albums" }
     }
 
     override fun convertToDB(
@@ -56,7 +58,10 @@ class DatabaseSavedAlbumPlaylistRepository(
         fetchTime: Instant,
     ): Pair<String, Instant?> {
         val albumPlaylistId = savedNetworkType.value.id
-        albumPlaylistRepository.convertToDB(networkModel = savedNetworkType.value, fetchTime = fetchTime)?.let { albumPlaylist ->
+        albumPlaylistRepository.convertToDB(
+            networkModel = savedNetworkType.value,
+            fetchTime = fetchTime
+        )?.let { albumPlaylist ->
             albumPlaylist.libraryOrder = savedNetworkType.index
             albumPlaylistRepository.update(id = albumPlaylistId, model = albumPlaylist, fetchTime = fetchTime)
         }

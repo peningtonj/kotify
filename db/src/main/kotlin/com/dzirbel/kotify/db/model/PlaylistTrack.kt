@@ -42,7 +42,11 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
 
     companion object : IntEntityClass<PlaylistTrack>(PlaylistTrackTable) {
         fun findOrCreateFromTrack(trackId: String, playlistId: String, indexOnPlaylist: Int): PlaylistTrack {
-            return find { (PlaylistTrackTable.track eq trackId) and (PlaylistTrackTable.playlist eq playlistId) and (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist) }
+            return find {
+                (PlaylistTrackTable.track eq trackId) and
+                    (PlaylistTrackTable.playlist eq playlistId) and
+                    (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist)
+            }
                 .firstOrNull()
                 ?: new {
                     this.trackId = EntityID(id = trackId, table = TrackTable)
@@ -52,7 +56,11 @@ class PlaylistTrack(id: EntityID<Int>) : IntEntity(id) {
         }
 
         fun findOrCreateFromEpisode(episodeId: String, playlistId: String, indexOnPlaylist: Int): PlaylistTrack {
-            return find { (PlaylistTrackTable.episode eq episodeId) and (PlaylistTrackTable.playlist eq playlistId) and (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist)}
+            return find {
+                (PlaylistTrackTable.episode eq episodeId) and
+                    (PlaylistTrackTable.playlist eq playlistId) and
+                    (PlaylistTrackTable.indexOnPlaylist eq indexOnPlaylist)
+            }
                 .firstOrNull()
                 ?: new {
                     this.episodeId = EntityID(id = episodeId, table = EpisodeTable)

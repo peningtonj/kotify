@@ -6,27 +6,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.SavedRepository
-import com.dzirbel.kotify.repository.album.AlbumRepository
-import com.dzirbel.kotify.repository.album.AlbumTracksRepository
-import com.dzirbel.kotify.repository.album.DatabaseAlbumRepository
-import com.dzirbel.kotify.repository.album.DatabaseAlbumTracksRepository
-import com.dzirbel.kotify.repository.album.DatabaseSavedAlbumRepository
-import com.dzirbel.kotify.repository.album.SavedAlbumRepository
+import com.dzirbel.kotify.repository.album.*
+import com.dzirbel.kotify.repository.albumplaylist.*
+import com.dzirbel.kotify.repository.artist.*
 import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.player.PlayerRepository
-import com.dzirbel.kotify.repository.playlist.DatabasePlaylistRepository
-import com.dzirbel.kotify.repository.playlist.DatabasePlaylistTracksRepository
-import com.dzirbel.kotify.repository.playlist.DatabaseSavedPlaylistRepository
-import com.dzirbel.kotify.repository.playlist.PlaylistRepository
-import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
-import com.dzirbel.kotify.repository.playlist.SavedPlaylistRepository
-import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistAlbumsRepository
-import com.dzirbel.kotify.repository.albumplaylist.DatabaseAlbumPlaylistAlbumsRepository
-import com.dzirbel.kotify.repository.albumplaylist.AlbumPlaylistRepository
-import com.dzirbel.kotify.repository.albumplaylist.DatabaseSavedAlbumPlaylistRepository
-import com.dzirbel.kotify.repository.albumplaylist.DatabaseAlbumPlaylistRepository
-import com.dzirbel.kotify.repository.albumplaylist.SavedAlbumPlaylistRepository
-import com.dzirbel.kotify.repository.artist.*
+import com.dzirbel.kotify.repository.playlist.*
 import com.dzirbel.kotify.repository.rating.DatabaseRatingRepository
 import com.dzirbel.kotify.repository.rating.RatingRepository
 import com.dzirbel.kotify.repository.track.DatabaseSavedTrackRepository
@@ -95,7 +80,7 @@ fun ProvideRepositories(content: @Composable () -> Unit) {
 
     val playlistTracksRepository = DatabasePlaylistTracksRepository(scope, trackRepository, userRepository)
     val playlistRepository = DatabasePlaylistRepository(scope, playlistTracksRepository, userRepository)
-    val albumPlaylistAlbumsRepository = DatabaseAlbumPlaylistAlbumsRepository(scope, albumRepository, trackRepository, playlistRepository, userRepository)
+    val albumPlaylistAlbumsRepository = DatabaseAlbumPlaylistAlbumsRepository(scope, albumRepository, playlistRepository)
     val albumPlaylistRepository = DatabaseAlbumPlaylistRepository(scope, albumPlaylistAlbumsRepository, userRepository)
 
     val savedAlbumRepository = DatabaseSavedAlbumRepository(scope, userRepository, albumRepository)

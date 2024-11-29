@@ -259,6 +259,8 @@ private fun PlaylistReorderButton(
         },
     ) {
         val text = when (val state = reorderState.value) {
+            PlaylistTracksRepository.PlaylistReorderState.Refreshing -> "Refreshing"
+
             PlaylistTracksRepository.PlaylistReorderState.Calculating -> "Calculating"
 
             is PlaylistTracksRepository.PlaylistReorderState.Reordering ->

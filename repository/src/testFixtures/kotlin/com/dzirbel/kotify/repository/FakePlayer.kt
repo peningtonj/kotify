@@ -61,4 +61,5 @@ class FakePlayer(
     override fun setVolume(volumePercent: Int) { }
     override fun transferPlayback(deviceId: String, play: Boolean?) { }
     override fun reset() { }
+    override fun addToQueue(context: Player.PlayContext?) { }
 }

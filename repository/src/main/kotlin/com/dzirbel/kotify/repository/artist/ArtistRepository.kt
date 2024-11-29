@@ -10,11 +10,9 @@ import com.dzirbel.kotify.network.model.SpotifyArtist
 import com.dzirbel.kotify.repository.ConvertingRepository
 import com.dzirbel.kotify.repository.DatabaseEntityRepository
 import com.dzirbel.kotify.repository.Repository
-import com.dzirbel.kotify.repository.convertToDB
 import com.dzirbel.kotify.repository.util.updateOrInsert
 import com.dzirbel.kotify.util.coroutines.flatMapParallel
 import kotlinx.coroutines.CoroutineScope
-import org.jetbrains.exposed.sql.emptySized
 import java.time.Instant
 
 interface ArtistRepository : Repository<ArtistViewModel>, ConvertingRepository<Artist, SpotifyArtist>

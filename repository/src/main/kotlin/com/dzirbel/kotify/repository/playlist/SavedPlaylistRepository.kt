@@ -10,6 +10,7 @@ import com.dzirbel.kotify.repository.convertToDB
 import com.dzirbel.kotify.repository.user.UserRepository
 import com.dzirbel.kotify.util.coroutines.mapParallel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.withIndex
 import java.time.Instant
@@ -46,7 +47,7 @@ class DatabaseSavedPlaylistRepository(
     }
 
     override suspend fun fetchLibrary(): Iterable<IndexedValue<SpotifyPlaylist>> {
-        return Spotify.Playlists.getPlaylists(limit = Spotify.MAX_LIMIT).asFlow().withIndex().toList().filter { playlist -> playlist.value.owner.id == "peningtonj" }
+        return Spotify.Playlists.getPlaylists(limit = Spotify.MAX_LIMIT).asFlow().mapNotNull { it }.withIndex().toList()
     }
 
     override fun convertToDB(

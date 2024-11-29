@@ -102,7 +102,7 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
             },
         ) {
             if ((albumPlaylistAlbumsAdapter.derived { it.hasElements }.value)){
-                Row () {
+                Row {
                 AlbumPlaylistReorderButton(
                     reorder = {
                         playlistTracksRepository.reorder(
@@ -112,7 +112,9 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                         )
                     },
                     // TODO doesn't seem quite right... just revert to order by index on playlist?
-                    onReorderFinish = { playlistTracksAdapter.mutate { withSort(persistentListOf()) } },
+                    onReorderFinish = {
+                        playlistTracksRepository.refreshFromRemote(albumPlaylistId)
+                      },
                 )
                 AlbumPlaylistButton(
                     func = {
@@ -123,7 +125,9 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                         )
                     },
                     // TODO doesn't seem quite right... just revert to order by index on playlist?
-                    onFinish = { albumPlaylistAlbumsAdapter.mutate { withSort(persistentListOf()) } },
+                    onFinish = {
+                        albumPlaylistAlbumsRepository.refreshFromRemote(albumPlaylistId)
+                       },
                     enabledText = "Sync with remote",
                 )
                     if (albumPlaylist?.nextAlbumTrack != null) {
@@ -131,7 +135,7 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                             func = {
                                 playlistTracksRepository.addAtIndexes(
                                     playlistId = albumPlaylistId,
-                                    track = albumPlaylist?.nextAlbumTrack!!,
+                                    track = albumPlaylist.nextAlbumTrack!!,
                                     indexOnPlaylist = albumPlaylistAlbumsAdapter.value.map { album ->
                                         album.album?.totalTracks!!
                                     }.runningFold(-1) { acc, num -> acc + num + 1 }.drop(1)
@@ -148,7 +152,7 @@ data class AlbumPlaylistPage(private val albumPlaylistId: String) : Page {
                             func = {
                                 playlistTracksRepository.removeTrack(
                                     playlistId = albumPlaylistId,
-                                    track = albumPlaylist?.nextAlbumTrack!!,
+                                    track = albumPlaylist.nextAlbumTrack!!,
                                 )
                             },
                             // TODO doesn't seem quite right... just revert to order by index on playlist?
@@ -333,6 +337,8 @@ private fun AlbumPlaylistReorderButton(
         },
     ) {
         val text = when (val state = reorderState.value) {
+            PlaylistTracksRepository.PlaylistReorderState.Refreshing -> "Refreshing"
+
             PlaylistTracksRepository.PlaylistReorderState.Calculating -> "Calculating"
 
             is PlaylistTracksRepository.PlaylistReorderState.Reordering ->

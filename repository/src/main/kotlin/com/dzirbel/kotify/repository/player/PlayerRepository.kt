@@ -16,6 +16,7 @@ import com.dzirbel.kotify.network.model.SpotifyTrackPlayback
 import com.dzirbel.kotify.repository.DataSource
 import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.player.Player.PlayContext
+import com.dzirbel.kotify.repository.track.TrackViewModel
 import com.dzirbel.kotify.repository.util.BackoffStrategy
 import com.dzirbel.kotify.repository.util.JobLock
 import com.dzirbel.kotify.repository.util.ToggleableState
@@ -108,6 +109,7 @@ class PlayerRepository(private val scope: CoroutineScope) : Player {
     private val toggleShuffleLock = JobLock()
     private val setVolumeLock = JobLock()
     private val transferPlaybackLock = JobLock()
+    private val addToQueueLock = JobLock()
 
     private var songEndJob: Job? = null
 
@@ -444,6 +446,24 @@ class PlayerRepository(private val scope: CoroutineScope) : Player {
 
                 // TODO verify applied?
             }
+        }
+    }
+
+    override fun addToQueue(context: PlayContext?) {
+        addToQueueLock.launch(scope = scope) {
+            val start = CurrentTime.mark
+
+            try {
+                Spotify.Player.addItemToQueue(uri = context?.contextUri!!)
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (throwable: Throwable) {
+                _errors.emit(throwable)
+                _log.error(throwable, "Error adding to queue ${context?.contextUri}", duration = start.elapsedNow())
+                throw throwable
+            }
+
+            _log.success("Add to queue ${context.contextUri}", duration = start.elapsedNow())
         }
     }
 

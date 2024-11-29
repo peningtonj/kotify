@@ -139,7 +139,7 @@ object Spotify {
             .header("Authorization", "${token.tokenType} ${token.accessToken}")
             .build()
 
-        var attempt = 0
+        var attempt = 10
         while (true) {
             attempt++
             val response = configuration.okHttpClient.newCall(request).await()
@@ -148,8 +148,8 @@ object Spotify {
                     return response.bodyFromJson(json)
                 }
 
-                if (response.code == 429) { // HTTP 429: Too Many Requests
-                    val retryAfter = response.headers["Retry-After"]?.toLongOrNull() ?: 5L
+                if ((response.code == 429) and (attempt < 20)) { // HTTP 429: Too Many Requests
+                    val retryAfter = response.headers["Retry-After"]?.toLongOrNull() ?: 10L
                     delay(retryAfter * 1000) // Retry after the specified delay in seconds
                 } else {
                     throw SpotifyError.from(response)
@@ -1216,12 +1216,12 @@ object Spotify {
          * @param offset Optional. The index of the first playlist to return. Default: 0 (the first object). Maximum
          *  offset: 100.000. Use with limit to get the next set of playlists.
          */
-        suspend fun getPlaylists(limit: Int? = null, offset: Int? = null): Paging<SimplifiedSpotifyPlaylist> {
+        suspend fun getPlaylists(limit: Int? = null, offset: Int? = null): Paging<SimplifiedSpotifyPlaylist?> {
             return get("me/playlists", mapOf("limit" to limit?.toString(), "offset" to offset?.toString()))
         }
 
         suspend fun getAlbumPlaylists(limit: Int? = null, offset: Int? = null): Iterable<FullSpotifyPlaylist> {
-            val allPlaylists = getPlaylists(limit, offset).asFlow().toList()
+            val allPlaylists = getPlaylists(limit, offset).asFlow().toList().mapNotNull { it }
             return allPlaylists.filter { playlist ->
                 playlist.description == "albums"
             }.map {

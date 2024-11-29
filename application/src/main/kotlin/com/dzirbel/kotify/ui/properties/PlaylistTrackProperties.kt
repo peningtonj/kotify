@@ -23,6 +23,9 @@ object PlaylistTrackIndexProperty :
     override fun toNumber(item: PlaylistTrackViewModel) = item.indexOnPlaylist + 1
 }
 
-object PlaylistDirectSortIndexProperty : PropertyByNumber<PlaylistTrackViewModel>(title = "Draggable", divisionRange = TRACK_INDEX_DIVISION_RANGE) {
+object PlaylistDirectSortIndexProperty : PropertyByNumber<PlaylistTrackViewModel>(
+    title = "Draggable",
+    divisionRange = TRACK_INDEX_DIVISION_RANGE
+) {
     override fun toNumber(item: PlaylistTrackViewModel) = item.directSortIndex + 1
 }

@@ -31,6 +31,8 @@ interface PlaylistTracksRepository :
     ConvertingRepository<List<PlaylistTrack>, List<SpotifyPlaylistTrack>> {
 
     sealed interface PlaylistReorderState {
+        data object Refreshing : PlaylistReorderState
+
         /**
          * The first phase in which the set of operations to apply is being calculated.
          */
@@ -149,6 +151,9 @@ class DatabasePlaylistTracksRepository(
     ): Flow<PlaylistTracksRepository.PlaylistReorderState> {
         // TODO prevent concurrent reorders of the same playlist
         return flow {
+            emit(PlaylistTracksRepository.PlaylistReorderState.Refreshing)
+            refreshFromRemote(playlistId)
+                .join()
             emit(PlaylistTracksRepository.PlaylistReorderState.Calculating)
             val ops = ReorderCalculator.calculateReorderOperations(list = tracks, comparator = comparator)
 
@@ -200,12 +205,20 @@ class DatabasePlaylistTracksRepository(
         val playlistTrack = when (val track = spotifyPlaylistTrack.track) {
             is SimplifiedSpotifyTrack ->
                 trackRepository.convertToDB(track, fetchTime)?.id?.value?.let { trackId ->
-                    PlaylistTrack.findOrCreateFromTrack(trackId = trackId, playlistId = playlistId, indexOnPlaylist = index )
+                    PlaylistTrack.findOrCreateFromTrack(
+                        trackId = trackId,
+                        playlistId = playlistId,
+                        indexOnPlaylist = index
+                    )
                 }
 
             is SimplifiedSpotifyEpisode -> {
                 val episode = EpisodeRepository.convertToDB(networkModel = track, fetchTime = fetchTime)
-                PlaylistTrack.findOrCreateFromEpisode(episodeId = episode.id.value, playlistId = playlistId, indexOnPlaylist = index)
+                PlaylistTrack.findOrCreateFromEpisode(
+                    episodeId = episode.id.value,
+                    playlistId = playlistId,
+                    indexOnPlaylist = index
+                )
             }
 
             null -> null
@@ -221,7 +234,11 @@ class DatabasePlaylistTracksRepository(
         }
     }
 
-    override fun addAtIndexes(track: TrackViewModel, playlistId: String, indexesOnPlaylist: List<Int>) : Flow<PlaylistTracksRepository.PlaylistSyncState> {
+    override fun addAtIndexes(
+        track: TrackViewModel,
+        playlistId: String,
+        indexesOnPlaylist: List<Int>,
+    ) : Flow<PlaylistTracksRepository.PlaylistSyncState> {
         return flow {
             emit(PlaylistTracksRepository.PlaylistSyncState.Calculating)
             val uri = track.uri.toString()
@@ -247,7 +264,6 @@ class DatabasePlaylistTracksRepository(
 
             refreshFromRemote(id = playlistId)
                 .join()
-
         }
     }
 }

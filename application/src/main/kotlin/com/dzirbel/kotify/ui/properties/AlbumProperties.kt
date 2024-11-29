@@ -22,6 +22,7 @@ open class AlbumNameProperty<A>(private val toAlbum: (A) -> AlbumViewModel) : Pr
     object ForArtistAlbum : AlbumNameProperty<ArtistAlbumViewModel>(toAlbum = { it.album })
 }
 
+
 open class AlbumReleaseDateProperty<A>(
     private val toAlbum: (A) -> AlbumViewModel,
 ) : PropertyByReleaseDate<A>(title = "Release date") {
@@ -74,3 +75,4 @@ open class AlbumTotalTracksProperty<A>(private val toAlbum: (A) -> AlbumViewMode
     companion object : AlbumTotalTracksProperty<AlbumViewModel>(toAlbum = { it })
     object ForArtistAlbum : AlbumTotalTracksProperty<ArtistAlbumViewModel>(toAlbum = { it.album })
 }
+

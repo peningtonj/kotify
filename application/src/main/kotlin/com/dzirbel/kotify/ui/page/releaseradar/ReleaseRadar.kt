@@ -44,8 +44,9 @@ data object ReleaseRadar : Page {
         val artistRepository = LocalArtistRepository.current
         val artistAlbumsRepository = LocalArtistAlbumsRepository.current
         val albumRepository = LocalAlbumRepository.current
+        val similarArtistsRepository = LocalSimilarArtistsRepository.current
 
-        val recommendationEngine = ArtistRecommendationEngine()
+        val recommendationEngine = ArtistRecommendationEngine(artistRepository, similarArtistsRepository)
 
         val displayedAlbumTypes = remember { mutableStateOf(persistentSetOf(AlbumType.ALBUM)) }
 
@@ -72,7 +73,7 @@ data object ReleaseRadar : Page {
 
 
         val similarArtistsAdapter = rememberListAdapterState(scope = scope) {
-            val similarArtistIds = recommendationEngine.similarArtistsRecommendation(artistsAdapter.value.map { it }).filter { it.second > 2 }
+            val similarArtistIds = recommendationEngine.similarArtistsRecommendation(artistsAdapter.value.map { it }).filter { it.second.count() > 2 }
             artistRepository.statesOf(similarArtistIds.map { it.first.id })
                 .combinedStateWhenAllNotNull { it?.cachedValue }
         }

@@ -1,17 +1,13 @@
 package com.dzirbel.kotify.repository.albumplaylist
 
 import com.dzirbel.kotify.db.model.AlbumPlaylist
-import com.dzirbel.kotify.db.model.PlaylistTrack
 import com.dzirbel.kotify.db.model.TrackTable
-import com.dzirbel.kotify.network.Spotify
 import com.dzirbel.kotify.network.Spotify.Playlists.getPlaylist
 import com.dzirbel.kotify.network.model.*
 import com.dzirbel.kotify.repository.ConvertingRepository
 import com.dzirbel.kotify.repository.DatabaseEntityRepository
 import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
-import com.dzirbel.kotify.repository.playlist.PlaylistTracksRepository
-import com.dzirbel.kotify.repository.track.TrackRepository
 import com.dzirbel.kotify.repository.user.UserRepository
 import com.dzirbel.kotify.repository.user.convertToDB
 import com.dzirbel.kotify.repository.util.updateOrInsert

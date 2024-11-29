@@ -11,12 +11,8 @@ data class AlbumPlaylistAlbumViewModel(
     val addedAt: String? = null,
     val isLocal: Boolean = false,
     val indexOnPlaylist: Int,
-    var draggableViewIndex: Int,
+    val draggableViewIndex: Int,
     ) {
-        val addedAtInstant: Instant? by lazy {
-            addedAt?.let { Instant.parse(it) }
-        }
-
         constructor(
             albumPlaylistAlbum: AlbumPlaylistAlbum,
             album: AlbumViewModel? = albumPlaylistAlbum.album?.let(::AlbumViewModel),

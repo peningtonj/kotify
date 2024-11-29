@@ -24,9 +24,13 @@ fun <E> List<AdapterProperty<E>>.sortableProperties(): ImmutableList<SortablePro
 
 /**
  * Filters this [List] for only the [DividableProperty]s it contains.
- */
+// */
 fun <E> List<AdapterProperty<E>>.dividableProperties(): ImmutableList<DividableProperty<E>> {
     return filterIsInstance<DividableProperty<E>>().toImmutableList()
+}
+
+fun <E> List<AdapterProperty<E>>.filterableProperties(): ImmutableList<FilterableProperty<E>> {
+    return filterIsInstance<FilterableProperty<E>>().toImmutableList()
 }
 
 /**

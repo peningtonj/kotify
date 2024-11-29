@@ -2,7 +2,6 @@ package com.dzirbel.kotify.util
 
 import assertk.Assert
 import assertk.all
-import assertk.assertions.containsAll
 import assertk.assertions.containsAtLeast
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder

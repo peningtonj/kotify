@@ -4,12 +4,9 @@ import com.dzirbel.kotify.db.SavedEntityTable
 import com.dzirbel.kotify.db.SpotifyEntity
 import com.dzirbel.kotify.db.SpotifyEntityClass
 import com.dzirbel.kotify.db.SpotifyEntityTable
-import com.dzirbel.kotify.db.model.PlaylistTrack.Companion
 import com.dzirbel.kotify.db.util.sized
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.javatime.timestamp
 import java.time.Instant
 
@@ -39,7 +36,6 @@ object ArtistTable : SpotifyEntityTable(entityName = "artist") {
     object SavedArtistsTable : SavedEntityTable(name = "saved_artists")
 }
 
-
 class Artist(id: EntityID<String>) : SpotifyEntity(id = id, table = ArtistTable) {
     var popularity: Int? by ArtistTable.popularity
     var followersTotal: Int? by ArtistTable.followersTotal
@@ -49,11 +45,12 @@ class Artist(id: EntityID<String>) : SpotifyEntity(id = id, table = ArtistTable)
 
     val similarArtists: SizedIterable<Artist>
         get() = ArtistTable.SimilarArtistsTable
-            .selectAll().where { ArtistTable.SimilarArtistsTable.artist eq id }.mapNotNull {
+            .selectAll()
+            .where { ArtistTable.SimilarArtistsTable.artist eq id }
+            .mapNotNull {
                 Artist.findById(it[ArtistTable.SimilarArtistsTable.similarArtist])
             }
             .sized()
-
 
     companion object : SpotifyEntityClass<Artist>(ArtistTable) {
         fun similarArtistsList(artistId: String): List<Artist> {
@@ -62,6 +59,4 @@ class Artist(id: EntityID<String>) : SpotifyEntity(id = id, table = ArtistTable)
                 .flatten()
         }
     }
-
-
 }

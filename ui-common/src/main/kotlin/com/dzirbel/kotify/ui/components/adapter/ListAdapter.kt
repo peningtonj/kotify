@@ -30,6 +30,8 @@ class ListAdapter<E> private constructor(
      */
     private val elements: List<ElementData<E>>?,
 
+    private val originalElements: List<ElementData<E>>?,
+
     /**
      * Maps element indexes from the current applied [sorts], i.e. element i in [sortIndexes] is the index of in
      * elements which should be placed at index i when sorted.
@@ -71,7 +73,9 @@ class ListAdapter<E> private constructor(
      * Retained as a field for convenience to encapsulate the state of elements for external users.
      */
     val filterString: String?,
-) : Iterable<E> {
+
+
+    ) : Iterable<E> {
     private data class ElementData<E>(
         val element: E,
 
@@ -198,13 +202,29 @@ class ListAdapter<E> private constructor(
      */
     fun withFilter(filterString: String? = null, filter: ((element: E) -> Boolean)?): ListAdapter<E> {
         return ListAdapter(
-            elements = elements?.map {
+            elements = originalElements?.map {
                 it.copy(filtered = filter?.invoke(it.element) != false)
             },
+            originalElements = originalElements,
             sortIndexes = sortIndexes,
             sorts = sorts,
             divider = divider,
             filter = filter,
+            filterString = filterString,
+        )
+    }
+
+
+    fun withFilters(filters: List<(E) -> Boolean>): ListAdapter<E> {
+        return ListAdapter(
+            elements = originalElements?.map {
+                it.copy(filtered = filters.all {filter -> filter.invoke(it.element)})
+            },
+            originalElements = originalElements,
+            sortIndexes = sortIndexes,
+            sorts = sorts,
+            divider = divider,
+            filter = {element -> filters.all { filter -> filter(element)}},
             filterString = filterString,
         )
     }
@@ -238,6 +258,7 @@ class ListAdapter<E> private constructor(
             elements = elements?.map {
                 it.copy(division = divider?.dividableProperty?.divisionFor(it.element))
             },
+            originalElements = originalElements,
             sortIndexes = sortIndexes,
             sorts = sorts,
             divider = divider,
@@ -258,6 +279,7 @@ class ListAdapter<E> private constructor(
         if (sorts == this.sorts) return this
 
         return ListAdapter(
+            originalElements = originalElements,
             elements = elements,
             sortIndexes = sorts?.let { sortIndexes(sorts = sorts, elements = elements) },
             sorts = sorts,
@@ -284,6 +306,7 @@ class ListAdapter<E> private constructor(
         val elementData = this.elements.orEmpty().plus(newElementData)
 
         return ListAdapter(
+            originalElements = elementData,
             elements = elementData,
             sortIndexes = sorts?.let { sortIndexes(sorts = sorts, elements = elementData) },
             sorts = sorts,
@@ -306,6 +329,7 @@ class ListAdapter<E> private constructor(
         }
 
         return ListAdapter(
+            originalElements = originalElements,
             elements = elementData,
             sortIndexes = sorts?.let { sortIndexes(sorts = sorts, elements = elementData) },
             sorts = sorts,
@@ -360,6 +384,9 @@ class ListAdapter<E> private constructor(
         ): ListAdapter<E> {
             return ListAdapter(
                 elements = elements?.map { element ->
+                    ElementData(element = element, filtered = true, division = null)
+                },
+                originalElements = elements?.map { element ->
                     ElementData(element = element, filtered = true, division = null)
                 },
                 sortIndexes = null,

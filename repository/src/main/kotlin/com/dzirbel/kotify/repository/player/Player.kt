@@ -16,6 +16,7 @@ import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.artist.ArtistViewModel
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
 import com.dzirbel.kotify.repository.playlist.PlaylistViewModel
+import com.dzirbel.kotify.repository.track.TrackViewModel
 import com.dzirbel.kotify.repository.util.ToggleableState
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -188,6 +189,11 @@ interface Player : Logging<Repository.LogData> {
      * Asynchronously starts playback from the given [context] or resumes the current playback if null.
      */
     fun play(context: PlayContext? = null)
+
+    /**
+     * Asynchronously adds item to the queue.
+     */
+    fun addToQueue(context: PlayContext? = null)
 
     /**
      * Asynchronously pauses the current playback.

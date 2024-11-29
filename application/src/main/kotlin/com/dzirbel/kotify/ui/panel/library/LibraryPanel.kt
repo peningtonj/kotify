@@ -100,7 +100,7 @@ fun LibraryPanel(modifier: Modifier = Modifier) {
 
             val albumPlaylistRepository = LocalAlbumPlaylistRepository.current
             val savedAlbumPlaylistRepository = LocalSavedAlbumPlaylistRepository.current
-            val albumPlaylists = rememberListAdapterState() { scope ->
+            val albumPlaylists = rememberListAdapterState { scope ->
                 savedAlbumPlaylistRepository.library.flatMapLatestIn(scope) { cacheState ->
                     val ids = cacheState?.cachedValue?.ids
                     if (ids == null) {

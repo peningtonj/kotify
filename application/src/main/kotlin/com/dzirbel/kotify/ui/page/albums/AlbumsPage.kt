@@ -11,42 +11,25 @@ import androidx.compose.material.ContentAlpha
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.dzirbel.kotify.db.model.AlbumType
 import com.dzirbel.kotify.repository.CacheState
 import com.dzirbel.kotify.repository.album.AlbumViewModel
+import com.dzirbel.kotify.repository.artist.ArtistViewModel
+import com.dzirbel.kotify.repository.genre.GenreViewModel
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
-import com.dzirbel.kotify.ui.LocalAlbumRepository
-import com.dzirbel.kotify.ui.LocalAlbumTracksRepository
-import com.dzirbel.kotify.ui.LocalRatingRepository
-import com.dzirbel.kotify.ui.LocalSavedAlbumRepository
+import com.dzirbel.kotify.ui.*
 import com.dzirbel.kotify.ui.album.AlbumCell
-import com.dzirbel.kotify.ui.components.DividerSelector
-import com.dzirbel.kotify.ui.components.Interpunct
-import com.dzirbel.kotify.ui.components.LibraryInvalidateButton
-import com.dzirbel.kotify.ui.components.PageLoadingSpinner
-import com.dzirbel.kotify.ui.components.SortSelector
-import com.dzirbel.kotify.ui.components.adapter.AdapterProperty
-import com.dzirbel.kotify.ui.components.adapter.ListAdapterState
-import com.dzirbel.kotify.ui.components.adapter.dividableProperties
-import com.dzirbel.kotify.ui.components.adapter.rememberListAdapterState
-import com.dzirbel.kotify.ui.components.adapter.sortableProperties
+import com.dzirbel.kotify.ui.components.*
+import com.dzirbel.kotify.ui.components.adapter.*
+import com.dzirbel.kotify.ui.components.adapter.filters.FilterByValueList
 import com.dzirbel.kotify.ui.components.grid.Grid
-import com.dzirbel.kotify.ui.components.toImageSize
 import com.dzirbel.kotify.ui.page.Page
 import com.dzirbel.kotify.ui.page.PageScope
 import com.dzirbel.kotify.ui.page.album.AlbumPage
-import com.dzirbel.kotify.ui.pageStack
-import com.dzirbel.kotify.ui.properties.AlbumNameProperty
-import com.dzirbel.kotify.ui.properties.AlbumRatingProperty
-import com.dzirbel.kotify.ui.properties.AlbumReleaseDateProperty
-import com.dzirbel.kotify.ui.properties.AlbumTotalTracksProperty
-import com.dzirbel.kotify.ui.properties.AlbumTypeDividableProperty
+import com.dzirbel.kotify.ui.properties.*
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.util.derived
 import com.dzirbel.kotify.ui.util.mutate
@@ -56,11 +39,15 @@ import com.dzirbel.kotify.util.coroutines.combinedStateWhenAllNotNull
 import com.dzirbel.kotify.util.coroutines.flatMapLatestIn
 import com.dzirbel.kotify.util.coroutines.onEachIn
 import com.dzirbel.kotify.util.coroutines.runningFoldIn
+import com.dzirbel.kotify.util.immutable.countBy
 import com.dzirbel.kotify.util.immutable.orEmpty
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlin.reflect.typeOf
 
 val albumCellImageSize = Dimens.contentImage
 
@@ -87,8 +74,7 @@ data object AlbumsPage : Page {
                 if (ids == null) {
                     MutableStateFlow(if (cacheState is CacheState.Error) emptyList() else null)
                 } else {
-                    albumRepository.statesOf(ids)
-                        .combinedStateWhenAllNotNull { it?.cachedValue }
+                    albumRepository.statesOf(ids).combinedStateWhenAllNotNull { it?.cachedValue }
                         .onEachIn(scope) { albums ->
                             albums?.requestBatched(
                                 transactionName = { "load $it albums images for $albumCellImageSize" },
@@ -116,13 +102,86 @@ data object AlbumsPage : Page {
             )
         }
 
-            DisplayVerticalScrollPage(
-                title = "Saved Albums",
-                header = {
-                    AlbumsPageHeader(albumsAdapter = albumsAdapter, albumProperties = albumProperties)
-                },
-            ) {
+        val artistsMap = remember(scope) {
+            mutableStateMapOf<String, List<ArtistViewModel>?>()
+        }
+
+        val artistRepository = LocalArtistRepository.current
+        artistsMap.mapValues { (_, artists) ->
+            artists?.forEach { artist ->
+                if (artist.fullUpdatedTime == null) {
+                    artistRepository.refreshFromRemote(artist.id)
+                }
+            }
+        }
+
+        val genreMap = remember(scope) {
+            mutableStateMapOf<String, List<GenreViewModel>?>()
+        }
+
+// Launch a coroutine to observe artist details for each album
+        LaunchedEffect(albumsAdapter.value) {
+            albumsAdapter.value.forEach { album ->
+                launch {
+                    album.artists.collect { artistList ->
+                        artistsMap[album.id] = artistList
+                        artistList?.map { artist ->
+                            artist.genres.collect { genreList ->
+                                genreMap[artist.id] = genreList
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+// Use artistsMap to access resolved artist details
+        val albumGenreFilterProperty = remember {
+            AlbumGenreFilterProperty(
+                title = "Album Genres",
+                genres = mutableListOf() // Start with an empty list
+            )
+        }
+
+        LaunchedEffect(Unit) {
+            snapshotFlow { genreMap.values.flatMap { it.orEmpty() } }
+                .collect { flattenedGenres ->
+                    val newGenres = flattenedGenres
+                        .groupBy { it.name }
+                        .filterValues { it.size > 5 }
+                        .keys
+                        .toList()
+
+                    albumGenreFilterProperty.addValues(newGenres.toSet())
+                }
+        }
+
+
+        // Create the AlbumGenreFilterProperty upfront
+
+        val filterableAlbumProperties: PersistentList<FilterableProperty<AlbumViewModel>> =
+            remember(albumIds) {
+                persistentListOf(
+                    AlbumTypeFilterProperty(
+                        title = "Album Types",
+                        types = listOf(AlbumType.ALBUM, AlbumType.EP, AlbumType.SINGLE)
+                    ), AlbumRatingFilterProperty(
+                        title = "Album Ratings",
+                        ratings = (0 .. 5).toList(),
+                        ratingRepository = ratingRepository),
+                    albumGenreFilterProperty
+                )
+            }
+
+        DisplayVerticalScrollPage(
+            title = "Saved Albums",
+            header = {
+                AlbumsPageHeader(albumsAdapter = albumsAdapter, albumProperties = albumProperties)
+            },
+        ) {
             if (albumsAdapter.derived { it.hasElements }.value) {
+                AlbumFilterSection(albumsAdapter, filterableAlbumProperties)
                 Grid(
                     elements = albumsAdapter.value,
                     edgePadding = PaddingValues(
@@ -143,6 +202,19 @@ data object AlbumsPage : Page {
             }
         }
     }
+}
+
+@Composable
+private fun AlbumFilterSection(
+    albumsAdapter: ListAdapterState<AlbumViewModel>,
+    filterableAlbumProperties: PersistentList<FilterableProperty<AlbumViewModel>>,
+) {
+
+
+    FilterOptions(
+        filterableOptions = filterableAlbumProperties,
+        onSetFilter = albumsAdapter::withFilters,
+    )
 }
 
 @Composable

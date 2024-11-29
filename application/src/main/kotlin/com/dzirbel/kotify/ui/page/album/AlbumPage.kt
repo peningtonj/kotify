@@ -11,22 +11,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.dzirbel.kotify.network.Spotify
+import com.dzirbel.kotify.repository.CacheState
+import com.dzirbel.kotify.repository.CacheStrategy
+import com.dzirbel.kotify.repository.Repository
 import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.player.Player
+import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
+import com.dzirbel.kotify.repository.playlist.PlaylistViewModel
+import com.dzirbel.kotify.repository.track.TrackRepository
 import com.dzirbel.kotify.repository.track.TrackViewModel
 import com.dzirbel.kotify.repository.util.LazyTransactionStateFlow.Companion.requestBatched
-import com.dzirbel.kotify.ui.LocalAlbumRepository
-import com.dzirbel.kotify.ui.LocalAlbumTracksRepository
-import com.dzirbel.kotify.ui.LocalRatingRepository
-import com.dzirbel.kotify.ui.LocalSavedAlbumRepository
-import com.dzirbel.kotify.ui.LocalSavedTrackRepository
-import com.dzirbel.kotify.ui.components.Interpunct
-import com.dzirbel.kotify.ui.components.InvalidateButton
-import com.dzirbel.kotify.ui.components.LinkedText
-import com.dzirbel.kotify.ui.components.LoadedImage
-import com.dzirbel.kotify.ui.components.PageLoadingSpinner
-import com.dzirbel.kotify.ui.components.PlayButton
-import com.dzirbel.kotify.ui.components.ToggleSaveButton
+import com.dzirbel.kotify.ui.*
+import com.dzirbel.kotify.ui.components.*
 import com.dzirbel.kotify.ui.components.adapter.ListAdapterState
 import com.dzirbel.kotify.ui.components.adapter.rememberListAdapterState
 import com.dzirbel.kotify.ui.components.star.AverageAlbumRating
@@ -35,19 +32,13 @@ import com.dzirbel.kotify.ui.components.table.Table
 import com.dzirbel.kotify.ui.page.Page
 import com.dzirbel.kotify.ui.page.PageScope
 import com.dzirbel.kotify.ui.page.artist.ArtistPage
-import com.dzirbel.kotify.ui.pageStack
-import com.dzirbel.kotify.ui.properties.TrackAlbumIndexProperty
-import com.dzirbel.kotify.ui.properties.TrackArtistsProperty
-import com.dzirbel.kotify.ui.properties.TrackDurationProperty
-import com.dzirbel.kotify.ui.properties.TrackNameProperty
-import com.dzirbel.kotify.ui.properties.TrackPlayingColumn
-import com.dzirbel.kotify.ui.properties.TrackPopularityProperty
-import com.dzirbel.kotify.ui.properties.TrackRatingProperty
-import com.dzirbel.kotify.ui.properties.TrackSavedProperty
+import com.dzirbel.kotify.ui.properties.*
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.util.derived
 import com.dzirbel.kotify.ui.util.mutate
 import com.dzirbel.kotify.ui.util.rememberRatingStates
+import com.dzirbel.kotify.util.coroutines.combinedStateWhenAllNotNull
+import com.dzirbel.kotify.util.coroutines.flatMapLatestIn
 import com.dzirbel.kotify.util.coroutines.mapIn
 import com.dzirbel.kotify.util.coroutines.onEachIn
 import com.dzirbel.kotify.util.immutable.persistentListOfNotNull
@@ -55,6 +46,9 @@ import com.dzirbel.kotify.util.takingIf
 import com.dzirbel.kotify.util.time.formatMediumDuration
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 data class AlbumPage(val albumId: String) : Page {
@@ -63,6 +57,44 @@ data class AlbumPage(val albumId: String) : Page {
         val album = LocalAlbumRepository.current.stateOf(id = albumId).collectAsState().value?.cachedValue
 
         val albumTracksRepository = LocalAlbumTracksRepository.current
+
+        val playlistRepository = LocalPlaylistRepository.current
+        val savedPlaylistRepository = LocalSavedPlaylistRepository.current
+        val playlistTracksRepository = LocalPlaylistTracksRepository.current
+        val playlists = rememberListAdapterState(defaultSort = PlaylistLibraryOrderProperty) { scope ->
+            savedPlaylistRepository.library.flatMapLatestIn(scope) { cacheState ->
+                val ids = cacheState?.cachedValue?.ids
+                if (ids == null) {
+                    MutableStateFlow(if (cacheState is CacheState.Error) emptyList() else null)
+                } else {
+                    // TODO handle other cache states: shimmer when loading, show errors, etc
+                    playlistRepository.statesOf(
+                        ids = ids,
+                        cacheStrategy = CacheStrategy.EntityTTL(), // do not require a full playlist model
+                    ).combinedStateWhenAllNotNull { it?.cachedValue }
+                }
+            }
+        }
+        val localTrackRepository = LocalTrackRepository.current
+
+        val albumPlaylistRepository = LocalAlbumPlaylistRepository.current
+        val savedAlbumPlaylistRepository = LocalSavedAlbumPlaylistRepository.current
+        val albumPlaylists = rememberListAdapterState { scope ->
+            savedAlbumPlaylistRepository.library.flatMapLatestIn(scope) { cacheState ->
+                val ids = cacheState?.cachedValue?.ids
+                if (ids == null) {
+                    MutableStateFlow(if (cacheState is CacheState.Error) emptyList() else null)
+                } else {
+                    // TODO handle other cache states: shimmer when loading, show errors, etc
+                    albumPlaylistRepository.statesOf(
+                        ids = ids,
+                        cacheStrategy = CacheStrategy.EntityTTL(), // do not require a full playlist model
+                    ).combinedStateWhenAllNotNull { it?.cachedValue }
+                }
+            }
+        }
+
+
         val tracksAdapterState = rememberListAdapterState(
             key = albumId,
             defaultSort = TrackAlbumIndexProperty,
@@ -95,6 +127,7 @@ data class AlbumPage(val albumId: String) : Page {
                 TrackRatingProperty(ratingRepository = ratingRepository, trackIdOf = { track -> track.id }),
                 TrackDurationProperty,
                 TrackPopularityProperty,
+                TrackQueueColumn(),
             )
         }
 
@@ -105,11 +138,25 @@ data class AlbumPage(val albumId: String) : Page {
             },
         ) {
             if (tracksAdapterState.derived { it.hasElements }.value) {
-                Table(
-                    columns = trackProperties,
-                    items = tracksAdapterState.value,
-                    onSetSort = { tracksAdapterState.withSort(persistentListOfNotNull(it)) },
-                )
+                Column {
+                    ScrollableDropdownMenu(
+                        playlists = playlists,
+                        onOptionSelected = { option ->
+                            addAlbumToPlaylist(
+                                tracks = tracksAdapterState,
+                                playlist = option,
+                                trackRepository = localTrackRepository,
+                                albumPlaylists = albumPlaylists
+                            )
+                        },
+                    )
+
+                    Table(
+                        columns = trackProperties,
+                        items = tracksAdapterState.value,
+                        onSetSort = { tracksAdapterState.withSort(persistentListOfNotNull(it)) },
+                    )
+                }
             } else {
                 PageLoadingSpinner()
             }
@@ -140,6 +187,7 @@ private fun AlbumHeader(albumId: String, album: AlbumViewModel?, adapter: ListAd
                     )
 
                     PlayButton(context = Player.PlayContext.album(album), size = Dimens.iconMedium)
+
                 }
 
                 Row(
@@ -196,3 +244,29 @@ private fun AlbumHeader(albumId: String, album: AlbumViewModel?, adapter: ListAd
         }
     }
 }
+
+fun addAlbumToPlaylist(
+    tracks: ListAdapterState<TrackViewModel>,
+    playlist: PlaylistViewModel,
+    trackRepository: TrackRepository,
+    albumPlaylists: ListAdapterState<AlbumPlaylistViewModel>,
+) {
+    val albumPlaylist = albumPlaylists.value.find { it.id == playlist.id }
+    Repository.applicationScope.launch {
+        Spotify.Playlists.addItemsToPlaylist(
+            playlistId = playlist.id,
+            uris = tracks.value.map { it.uri!! }
+        )
+
+        if ((albumPlaylist != null) and (albumPlaylist!!.nextAlbumTrack != null)) {
+            val transitionTrack = trackRepository.stateOf(albumPlaylist.nextAlbumTrackId!!)
+                .first { it?.cachedValue != null }
+                ?.cachedValue
+            Spotify.Playlists.addItemsToPlaylist(
+                playlistId = playlist.id,
+                uris = listOf(transitionTrack!!.uri!!)
+            )
+        }
+    }
+}
+

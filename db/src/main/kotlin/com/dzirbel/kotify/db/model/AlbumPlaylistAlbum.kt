@@ -9,10 +9,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 
 object AlbumPlaylistAlbumTable : IntIdTable() {
-//    val addedAt: Column<String?> = varchar("added_at", 20).nullable()
     val indexOnPlaylist: Column<Int> = integer("index_on_playlist")
-//    val isLocal: Column<Boolean> = bool("is_local").nullable()
-//    val addedBy: Column<EntityID<String>> = reference("user", UserTable)
     val albumPlaylist: Column<EntityID<String>> = reference("albumPlaylist", AlbumPlaylistTable)
     val album: Column<EntityID<String>?> = reference("album", AlbumTable).nullable()
 
@@ -24,18 +21,18 @@ object AlbumPlaylistAlbumTable : IntIdTable() {
 class AlbumPlaylistAlbum(id: EntityID<Int>) : IntEntity(id) {
     var albumPlaylistId: EntityID<String> by AlbumPlaylistAlbumTable.albumPlaylist
     var albumId: EntityID<String>? by AlbumPlaylistAlbumTable.album
-//    var isLocal: Boolean by AlbumPlaylistAlbumTable.isLocal
 
-//    var addedAt: String? by AlbumPlaylistAlbumTable.addedAd
     var indexOnPlaylist: Int by AlbumPlaylistAlbumTable.indexOnPlaylist
 
-//    var addedBy: User by User referencedOn AlbumPlaylistAlbumTable.addedBy
     var albumPlaylist: AlbumPlaylist by AlbumPlaylist referencedOn AlbumPlaylistAlbumTable.albumPlaylist
     var album: Album? by Album optionalReferencedOn AlbumPlaylistAlbumTable.album
 
     companion object : IntEntityClass<AlbumPlaylistAlbum>(AlbumPlaylistAlbumTable) {
         fun findOrCreateFromAlbum(albumId: String, albumPlaylistId: String): AlbumPlaylistAlbum {
-            return find { (AlbumPlaylistAlbumTable.album eq albumId) and (AlbumPlaylistAlbumTable.albumPlaylist eq albumPlaylistId) }
+            return find {
+                (AlbumPlaylistAlbumTable.album eq albumId) and
+                    (AlbumPlaylistAlbumTable.albumPlaylist eq albumPlaylistId)
+            }
                 .firstOrNull()
                 ?: new {
                     this.albumId = EntityID(id = albumId, table = AlbumTable)

@@ -40,5 +40,4 @@ data class PlaylistTrackViewModel(
     }
 
     override fun hashCode() = track?.id?.hashCode() ?: episode?.id?.hashCode() ?: 0
-
 }

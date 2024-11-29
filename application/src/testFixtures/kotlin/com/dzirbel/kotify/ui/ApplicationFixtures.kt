@@ -37,6 +37,7 @@ object ApplicationFixtures {
                 GenreViewModel("epic"),
             ),
         ),
+        similarArtists = emptyList(),
     )
 
     val savedArtists: List<ArtistViewModel> = listOf(
@@ -46,18 +47,21 @@ object ApplicationFixtures {
             name = "Big Phil and the Boys",
             uri = "artist:bigphil",
             images = FakeImageViewModel.fromFile("bigphil.png"),
+            similarArtists = emptyList(),
         ),
         ArtistViewModel(
             id = "badghost",
             name = "A Bad Ghost Cover Band",
             uri = "artist:badghost",
             images = FakeImageViewModel.fromFile("generic/1.png"),
+            similarArtists = emptyList(),
         ),
         ArtistViewModel(
             id = "among-thieves",
             name = "Among Thieves",
             uri = "artist:among-thieves",
             images = FakeImageViewModel.fromFile("among-thieves.jpg"),
+            similarArtists = emptyList(),
         ),
     )
         .plus(
@@ -67,6 +71,7 @@ object ApplicationFixtures {
                     name = name,
                     uri = "artist-$index",
                     images = FakeImageViewModel.fromFile("generic/${index + 2}.png"),
+                    similarArtists = emptyList(),
                 )
             },
         )
@@ -120,6 +125,7 @@ object ApplicationFixtures {
             name = name,
             uri = "artist:$index",
             images = FakeImageViewModel(),
+            similarArtists = emptyList(),
         )
     }
 

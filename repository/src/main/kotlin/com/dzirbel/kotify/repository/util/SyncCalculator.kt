@@ -5,7 +5,8 @@ import java.util.Dictionary
 
 object SyncCalculator {
 
-    sealed interface  SyncOperation
+    sealed interface SyncOperation
+
     /**
      * A single operation which adds a list of [tracks] tracks at [position].
      */
@@ -41,7 +42,10 @@ object SyncCalculator {
      * TODO optimize to reduce number of operations when possible, i.e. merge neighboring moves that can be done in a
      *  single operation
      */
-    fun calculateSyncOperations(local: List<PlaylistTrackViewModel>, remote: List<PlaylistTrackViewModel>): List<SyncOperation> {
+    fun calculateSyncOperations(
+        local: List<PlaylistTrackViewModel>,
+        remote: List<PlaylistTrackViewModel>
+    ): List<SyncOperation> {
         if (local.size <= 1) return emptyList()
 
         val result = mutableListOf<SyncOperation>()
@@ -63,8 +67,8 @@ object SyncCalculator {
             .groupBy({ it.position }, { it.track })
 
         combinedAddOperations.forEach { (position, tracks) ->
-            result.add(AddOperation(tracks.sortedBy {
-                track -> track.indexOnPlaylist
+            result.add(AddOperation(tracks.sortedBy { track ->
+                track.indexOnPlaylist
             }, position))
         }
 

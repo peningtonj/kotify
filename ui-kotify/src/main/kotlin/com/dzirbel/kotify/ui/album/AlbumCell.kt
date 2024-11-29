@@ -2,12 +2,7 @@ package com.dzirbel.kotify.ui.album
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -17,7 +12,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import com.dzirbel.kotify.network.FullSpotifyTrackOrEpisode
 import com.dzirbel.kotify.network.model.FullSpotifyTrack
-import com.dzirbel.kotify.network.model.SpotifyTrack
 import com.dzirbel.kotify.repository.album.AlbumViewModel
 import com.dzirbel.kotify.repository.player.Player
 import com.dzirbel.kotify.repository.playlist.AlbumPlaylistViewModel
@@ -30,14 +24,10 @@ import com.dzirbel.kotify.ui.components.Interpunct
 import com.dzirbel.kotify.ui.components.LoadedImage
 import com.dzirbel.kotify.ui.components.PlayButton
 import com.dzirbel.kotify.ui.components.ToggleSaveButton
-import com.dzirbel.kotify.ui.components.star.AverageAlbumRating
 import com.dzirbel.kotify.ui.components.star.StarRating
 import com.dzirbel.kotify.ui.theme.Dimens
 import com.dzirbel.kotify.ui.theme.KotifyColors
 import com.dzirbel.kotify.ui.util.instrumentation.instrument
-import kotlinx.coroutines.flow.map
-import kotlin.math.max
-import kotlin.math.min
 
 @Composable
 fun AlbumCell(
@@ -165,6 +155,7 @@ fun albumPlaylistPlayIcon(
                         firstTrack.indexOnPlaylist
                     )
                 )
+                player.setShuffle(false)
             },
             enabled = Player.PlayContext.playlistTrack(
                 albumPlaylist!!,
